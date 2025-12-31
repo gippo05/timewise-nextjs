@@ -12,8 +12,12 @@ export default function LoginPage() {
 
     const [email, setEmail] = useState<string>("");
     const [password, setPassword] = useState<string>("");
+    const [confirmPassword, setConfirmPassword] = useState<string>("");
+    const [firstName, setFirstName] = useState<string>("");
+    const [lastName, setLastName] = useState<string>("");
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(false);
+
     const router = useRouter();
 
     const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,22 +28,38 @@ export default function LoginPage() {
         setPassword(e.target.value);
     };
 
-    const handleLogin = async (e: React.FormEvent) => {
+    const handleFirstNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFirstName(e.target.value);
+    };
+    const handleLastNameChange = (e:React.ChangeEvent<HTMLInputElement>) => {
+        setLastName(e.target.value);
+    };
+    const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setConfirmPassword(e.target.value);
+    };
+
+    const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
         const supabase = createClient();
 
-        // Handle login logic here
+        // Handle signup logic here
 
         try{
-            const { data, error } = await supabase.auth.signInWithPassword({
+            const { data, error } = await supabase.auth.signUp({
                 email,
                 password,
+                options: {
+                    data: {
+                        first_name: firstName,
+                        last_name: lastName,
+                    }
+                  }
             });
 
             if(error) throw error;
-            router.push("/dashboard");
+            router.push("/auth/login");
 
         } catch (error: unknown){
             setError(error instanceof Error ? error.message : "An error has occurred");
@@ -57,7 +77,7 @@ export default function LoginPage() {
           <p className="text-sm text-blue-100 mt-2">Smart Attendance & Productivity Tracker</p>
         </div>
 
-        <form className="space-y-6" onSubmit={handleLogin}>
+        <form className="space-y-6" onSubmit={handleRegister}>
           <div>
             <label className="block text-blue-900 text-sm font-medium mb-2">Email</label>
             <input
@@ -76,12 +96,58 @@ export default function LoginPage() {
             <label className="block text-blue-900 text-sm font-medium mb-2">Password</label>
             <input
               type="password"
-              placeholder="Enter your password"
+              placeholder="Enter your desired password"
               className="w-full px-4 py-3 rounded-xl bg-white/60 border border-blue-200
                          text-gray-900 placeholder-gray-500
                          focus:outline-none focus:ring-2 focus:ring-blue-400"
               value={password}
               onChange={handlePasswordChange}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-blue-900 text-sm font-medium mb-2">Re-enter Password</label>
+            <input
+              type="password"
+              placeholder="Re-enter your password"
+              className="w-full px-4 py-3 rounded-xl bg-white/60 border border-blue-200
+                         text-gray-900 placeholder-gray-500
+                         focus:outline-none focus:ring-2 focus:ring-blue-400"
+              value={confirmPassword}
+              onChange={handleConfirmPasswordChange}
+              required
+            />
+          </div>
+
+          {password !== confirmPassword && (
+            <p className="text-red-600 mt-2">Passwords do not match.</p>
+          )}
+
+             <div>
+            <label className="block text-blue-900 text-sm font-medium mb-2">First Name</label>
+            <input
+              type="text"
+              placeholder="Enter your First Name"
+              className="w-full px-4 py-3 rounded-xl bg-white/60 border border-blue-200
+                         text-gray-900 placeholder-gray-500
+                         focus:outline-none focus:ring-2 focus:ring-blue-400"
+              value={firstName}
+              onChange={handleFirstNameChange}
+              required
+            />
+          </div>
+
+            <div>
+            <label className="block text-blue-900 text-sm font-medium mb-2">Last Name</label>
+            <input
+              type="text"
+              placeholder="Enter your Last Name"
+              className="w-full px-4 py-3 rounded-xl bg-white/60 border border-blue-200
+                         text-gray-900 placeholder-gray-500
+                         focus:outline-none focus:ring-2 focus:ring-blue-400"
+              value={lastName}
+              onChange={handleLastNameChange}
               required
             />
           </div>
@@ -94,27 +160,20 @@ export default function LoginPage() {
                        text-white font-semibold transition transform hover:-translate-y-1 shadow-lg cursor-pointer
                        ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
           >
-            {isLoading ? "Logging in..." : "Login"}
+            {isLoading ? "Registering..." : "Register"}
           </button>
 
-         
+          <p className="text-center text-sm text-blue-100 mt-6">
+            Already have an account?{" "}
+          <a href="/auth/login" className="text-blue-200 font-medium hover:underline">
+            Log In.
+          </a>
+          </p>
+
 
           {error && <p className="text-red-600 mt-4 text-center">{error}</p>}
         </form>
 
-        <p className="text-center text-sm text-blue-100 mt-6">
-          New User?{" "}
-          <a href="/auth/register" className="text-blue-200 font-medium hover:underline">
-            Sign up.
-          </a>
-          </p>
-
-        <p className="text-center text-sm text-blue-100 mt-6">
-          Forgot password?{" "}
-          <a href="#" className="text-blue-200 font-medium hover:underline">
-            Reset
-          </a>
-        </p>
       </div>
     </div>
     )
