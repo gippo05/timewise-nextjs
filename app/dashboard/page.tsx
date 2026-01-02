@@ -17,11 +17,6 @@ const supabase = createClient();
 
 export default function DashboardPage() {
     const [name, setName] = useState<string | null>(" ");
-    
-
-
-console.log(getUser());
-
 
 useEffect(() => {
     getUser().then(setName)
