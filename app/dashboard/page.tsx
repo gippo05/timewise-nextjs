@@ -15,8 +15,8 @@ const getUser = async () =>{
 }
 
 export default function DashboardPage() {
-  const [name, setName] = useState<string | null>(" ");
-  const [temporaryStatus, setTemporaryStatus] = useState<string>(" ");
+  const [name, setName] = useState<string | null>("");
+  const [temporaryStatus, setTemporaryStatus] = useState<string>("");
 
   useEffect(() => {
     getUser().then(setName)
