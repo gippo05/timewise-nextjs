@@ -34,73 +34,86 @@ export default function DashboardPage() {
 
   const today = `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
 
-    try {
-      const timestamp = new Date().toISOString();    
-      let attendanceId: string | undefined;
+  try {
+    const timestamp = new Date().toISOString();
+    let attendanceId: string | undefined;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id;
-      if (!userId) {
-        console.error("No logged-in user");
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    if (!userId) {
+      console.error("No logged-in user");
+      return;
+    }
+
+    if (temporaryStatus === 'Clocked-in') {
+      const { data, error } = await supabase
+        .from('attendance')
+        .insert([{ clock_in: timestamp, user_id: userId }], { returning: 'representation' });
+
+      if (error) {
+        console.error("Insert error: ", error);
         return;
       }
 
-      if(temporaryStatus === 'Clocked-in'){
-        const {data, error} = await supabase
-          .from('attendance')
-          .insert([{ clock_in: timestamp, user_id: userId }]);
-
-        if (error){
-          console.error("Insert error: ", error);
-          return;
-        }
-
-        if(!data){
-          console.error("No attendance returned");
-          return;
-        }
-
-        attendanceId = data[0].id;
-
-      } else {
-        const { data, error } = await supabase
-          .from('attendance')
-          .select('id')
-          .eq('user_id', userId)
-          .is('clock_out', null)
-          .limit(1)
-          .single();
-
-        if (error || !data) {
-          console.error('Failed to find active attendance:', error);
-          return;
-        }
-
-        attendanceId = data.id;
+      if (!data) {
+        console.error("No attendance returned");
+        return;
       }
 
-      const statusToColumnMap: Record<string, string> = {
-        "Break": "break",
-        "End-Break": "end_break",
-        "Clocked-out": "clock_out",
-      };
+      attendanceId = data[0].id;
+      console.log("Inserted attendance with ID:", attendanceId);
 
-      const columnToUpdate = statusToColumnMap[temporaryStatus];
+    } else {
+      const { data, error } = await supabase
+        .from('attendance')
+        .select('id')
+        .eq('user_id', userId)
+        .is('clock_out', null)
+        .limit(1)
+        .single();
 
-      if (columnToUpdate) {
-        await supabase
-          .from('attendance')
-          .update({ [columnToUpdate]: timestamp }) 
-          .eq('id', attendanceId);
-      }
+     if (error || !data) {
+  console.error('Failed to find active attendance:', error, 'Data:', data);
+  return;
+}
 
-    } catch (error) {
-      console.error("Error", error);
+
+      attendanceId = data.id;
+      console.log("Found active attendance ID:", attendanceId);
     }
+
+    const statusToColumnMap: Record<string, string> = {
+      "Break": "break",
+      "End-Break": "end_break",
+      "Clocked-out": "clock_out",
+    };
+
+    const columnToUpdate = statusToColumnMap[temporaryStatus];
+
+    if (columnToUpdate) {
+      console.log("Updating column:", columnToUpdate, "for attendance ID:", attendanceId);
+      const { error: updateError } = await supabase
+        .from('attendance')
+        .update({ [columnToUpdate]: timestamp })
+        .eq('id', attendanceId);
+
+      if (updateError) {
+        console.error("Update error:", updateError);
+        return;
+      }
+      console.log("Update successful");
+    }
+
+    setTemporaryStatus(""); // Reset dropdown after submit
+
+  } catch (error) {
+    console.error("Error", error);
   }
+};
+
 
   return (
     <>
