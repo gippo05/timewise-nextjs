@@ -9,7 +9,12 @@ const supabase = createClient();
 // Fetch all attendance record (Login, Break, End Break, Logout)
 const {data: attendance, error} = await supabase
 .from('attendance')
-.select('*')
+.select(`*,
+    profiles (
+        first_name,
+        last_name
+    )
+        `)
 .order('created_at', {ascending: false})
 
 // Display all attendance records via mapping them one by one into the table
@@ -28,20 +33,19 @@ const {data: attendance, error} = await supabase
                         </tr>
                     </thead>
 
-                    <tbody>
-                       {attendance?.map((log) =>
-                    (
-                        <tr key={log.id}>
-                            <td>Placeholder</td>
-                            <td>{log.clock_in}</td>
-                            <td>{log.break}</td>
-                            <td>{log.end_break}</td>
-                            <td>{log.clock_out}</td>
-                            <td></td>
-                        </tr>
-                    ))} 
-                        
-                    </tbody>
+                 <tbody>
+                        {attendance?.map((log) => (
+                            <tr key={log.id}>
+                            <td>{log.profiles?.first_name} {log.profiles?.last_name}</td>
+                            <td>{log.clock_in ? new Date(log.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}</td>
+                            <td>{log.break ? new Date(log.break).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}</td>
+                            <td>{log.end_break ? new Date(log.end_break).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}</td>
+                            <td>{log.clock_out ? new Date(log.clock_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) : '-'}</td>
+                            <td>{log.created_at ? new Date(log.created_at).toLocaleDateString() : '-'}</td>
+                            </tr>
+                        ))}
+                        </tbody>
+
                 </table>
         </div>
         </>

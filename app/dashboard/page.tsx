@@ -98,9 +98,8 @@ export default function DashboardPage() {
           .eq('id', attendanceId);
       }
       console.log("Update successful");
-    }
 
-    setTemporaryStatus(""); // Reset dropdown after submit
+      setTemporaryStatus(""); // Reset dropdown after submit
 
     } catch (error) {
       console.error("Error", error);
