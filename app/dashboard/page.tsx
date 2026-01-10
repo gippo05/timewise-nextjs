@@ -48,24 +48,40 @@ export default function DashboardPage() {
         return;
       }
 
-      if(temporaryStatus === 'Clocked-in'){
-        const {data, error} = await supabase
+      if (temporaryStatus === 'Clocked-in') {
+        const { data, error } = await supabase
           .from('attendance')
           .insert([{ clock_in: timestamp, user_id: userId }]);
 
-        if (error){
+        if (error) {
           console.error("Insert error: ", error);
           return;
         }
 
-        if(!data){
+        if (!data) {
           console.error("No attendance returned");
           return;
         }
 
         attendanceId = data[0].id;
+        console.log("Inserted attendance with ID:", attendanceId);
 
       } else {
+        // For other statuses, update only the mapped column
+        const statusToColumnMap: Record<string, string> = {
+          "Break": "break",
+          "End-Break": "end_break",
+          "Clocked-out": "clock_out",
+        };
+
+        const columnToUpdate = statusToColumnMap[temporaryStatus];
+
+        if (!columnToUpdate) {
+          console.error("Invalid status selected for update:", temporaryStatus);
+          return;
+        }
+
+        // Find the active attendance row (clock_out IS NULL)
         const { data, error } = await supabase
           .from('attendance')
           .select('id')
@@ -80,22 +96,21 @@ export default function DashboardPage() {
         }
 
         attendanceId = data.id;
-      }
+        console.log("Updating attendance ID:", attendanceId, "column:", columnToUpdate);
 
-      const statusToColumnMap: Record<string, string> = {
-        "Break": "break",
-        "End-Break": "end_break",
-        "Clocked-out": "clock_out",
-      };
-
-      const columnToUpdate = statusToColumnMap[temporaryStatus];
-
-      if (columnToUpdate) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('attendance')
-          .update({ [columnToUpdate]: timestamp }) 
+          .update({ [columnToUpdate]: timestamp })
           .eq('id', attendanceId);
+
+        if (updateError) {
+          console.error("Update error:", updateError);
+          return;
+        }
       }
+
+      // Optionally, reset the select after successful submission
+      setTemporaryStatus("");
 
     } catch (error) {
       console.error("Error", error);
