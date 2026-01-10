@@ -34,54 +34,38 @@ export default function DashboardPage() {
 
   const today = `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+ const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
 
-    try {
-      const timestamp = new Date().toISOString();    
-      let attendanceId: string | undefined;
+  try {
+    const timestamp = new Date().toISOString();
+    let attendanceId: string | undefined;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id;
-      if (!userId) {
-        console.error("No logged-in user");
-        return;
-      }
+    const { data: { user } } = await supabase.auth.getUser();
+    const userId = user?.id;
+    if (!userId) {
+      console.error("No logged-in user");
+      return;
+    }
 
-      if (temporaryStatus === 'Clocked-in') {
-        const { data, error } = await supabase
+      if(temporaryStatus === 'Clocked-in'){
+        const {data, error} = await supabase
           .from('attendance')
           .insert([{ clock_in: timestamp, user_id: userId }]);
 
-        if (error) {
+        if (error){
           console.error("Insert error: ", error);
           return;
         }
 
-        if (!data) {
+        if(!data){
           console.error("No attendance returned");
           return;
         }
 
         attendanceId = data[0].id;
-        console.log("Inserted attendance with ID:", attendanceId);
 
       } else {
-        // For other statuses, update only the mapped column
-        const statusToColumnMap: Record<string, string> = {
-          "Break": "break",
-          "End-Break": "end_break",
-          "Clocked-out": "clock_out",
-        };
-
-        const columnToUpdate = statusToColumnMap[temporaryStatus];
-
-        if (!columnToUpdate) {
-          console.error("Invalid status selected for update:", temporaryStatus);
-          return;
-        }
-
-        // Find the active attendance row (clock_out IS NULL)
         const { data, error } = await supabase
           .from('attendance')
           .select('id')
@@ -90,27 +74,33 @@ export default function DashboardPage() {
           .limit(1)
           .single();
 
-        if (error || !data) {
-          console.error('Failed to find active attendance:', error);
-          return;
-        }
+     if (error || !data) {
+  console.error('Failed to find active attendance:', error, 'Data:', data);
+  return;
+}
+
 
         attendanceId = data.id;
-        console.log("Updating attendance ID:", attendanceId, "column:", columnToUpdate);
-
-        const { error: updateError } = await supabase
-          .from('attendance')
-          .update({ [columnToUpdate]: timestamp })
-          .eq('id', attendanceId);
-
-        if (updateError) {
-          console.error("Update error:", updateError);
-          return;
-        }
       }
 
-      // Optionally, reset the select after successful submission
-      setTemporaryStatus("");
+      const statusToColumnMap: Record<string, string> = {
+        "Break": "break",
+        "End-Break": "end_break",
+        "Clocked-out": "clock_out",
+      };
+
+      const columnToUpdate = statusToColumnMap[temporaryStatus];
+
+      if (columnToUpdate) {
+        await supabase
+          .from('attendance')
+          .update({ [columnToUpdate]: timestamp }) 
+          .eq('id', attendanceId);
+      }
+      console.log("Update successful");
+    }
+
+    setTemporaryStatus(""); // Reset dropdown after submit
 
     } catch (error) {
       console.error("Error", error);
