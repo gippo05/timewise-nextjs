@@ -9,7 +9,7 @@ export default function DashboardPage(){
   return(
     <>
     <DashboardClockSystem />
-    <ActivityTracker />
+    
     </>
   )
 }
