@@ -19,6 +19,7 @@ const {data: attendance, error} = await supabase
         `)
 .order('created_at', {ascending: false})
 
+
     return(
         <AttendanceTable attendance={attendance ?? []} />
     )
