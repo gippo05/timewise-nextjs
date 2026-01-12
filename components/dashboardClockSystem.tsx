@@ -151,12 +151,26 @@ export default function DashboardClockSystem() {
             <div className="flex items-end justify-center sm:justify-start">
               <button
                 type="submit"
-                className="w-full sm:w-auto px-5 sm:px-6 py-2 text-base sm:text-lg font-semibold text-white bg-blue-500
-                           rounded-xl shadow-md hover:bg-blue-600 active:bg-blue-700
-                           transition-all duration-200 cursor-pointer"
-              >
+                disabled={!temporaryStatus}
+                className="
+                    w-full sm:w-auto px-5 sm:px-6 py-2
+                    text-base sm:text-lg font-semibold text-white
+                    bg-blue-500 rounded-xl shadow-md
+                    transition-all duration-200
+
+                    hover:bg-blue-600 active:bg-blue-700
+                    cursor-pointer
+
+                    disabled:bg-gray-300
+                    disabled:text-gray-500
+                    disabled:shadow-none
+                    disabled:cursor-not-allowed
+                    disabled:hover:bg-gray-300
+                    disabled:active:bg-gray-300
+                "
+                >
                 Change Status
-              </button>
+                </button>
             </div>
           </form>
         </div>
