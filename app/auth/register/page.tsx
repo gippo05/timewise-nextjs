@@ -1,180 +1,205 @@
-"use client"
+"use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import logo from "@/public/TimeWISE logo.png"
+import { createClient } from "@/lib/supabase/client";
 
+import logo from "@/public/TimeWISE logo.png";
 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 
-export default function LoginPage() {
+export default function RegisterPage() {
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [confirmPassword, setConfirmPassword] = useState<string>("");
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
 
-    const [email, setEmail] = useState<string>("");
-    const [password, setPassword] = useState<string>("");
-    const [confirmPassword, setConfirmPassword] = useState<string>("");
-    const [firstName, setFirstName] = useState<string>("");
-    const [lastName, setLastName] = useState<string>("");
-    const [error, setError] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-    const router = useRouter();
+  const router = useRouter();
 
-    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setEmail(e.target.value);
-    };
+  const passwordsMatch = password === confirmPassword;
+  const canSubmit =
+    email.trim().length > 0 &&
+    password.length > 0 &&
+    confirmPassword.length > 0 &&
+    firstName.trim().length > 0 &&
+    lastName.trim().length > 0 &&
+    passwordsMatch &&
+    !isLoading;
 
-    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPassword(e.target.value);
-    };
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-    const handleFirstNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFirstName(e.target.value);
-    };
-    const handleLastNameChange = (e:React.ChangeEvent<HTMLInputElement>) => {
-        setLastName(e.target.value);
-    };
-    const handleConfirmPasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setConfirmPassword(e.target.value);
-    };
+    if (!passwordsMatch) {
+      setError("Passwords do not match.");
+      return;
+    }
 
-    const handleRegister = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setError(null);
-        const supabase = createClient();
+    setIsLoading(true);
+    setError(null);
 
-        // Handle signup logic here
+    const supabase = createClient();
 
-        try{
-            const { data, error } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        first_name: firstName,
-                        last_name: lastName,
-                    }
-                  }
-            });
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
+        },
+      });
 
-            if(error) throw error;
-            router.push("/auth/login");
+      if (error) throw error;
 
-        } catch (error: unknown){
-            setError(error instanceof Error ? error.message : "An error has occurred");
-        } finally {
-            setIsLoading(false);
-        }
-    };
+      router.push("/auth/login");
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error has occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    return(
-     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 via-blue-400 to-blue-600 px-4">
-      <div className="bg-white/30 backdrop-blur-md border border-white/40 rounded-2xl shadow-xl p-10 w-full max-w-md">
-        <div className="text-center mb-8">
-          <Image src={logo} alt="Logo" className="mx-auto mb-4" width={150} height={50} />
-          <h1 className="text-3xl font-extrabold text-blue-900 drop-shadow-sm">TimeWise</h1>
-          <p className="text-sm text-blue-100 mt-2">Smart Attendance & Productivity Tracker</p>
-        </div>
-
-        <form className="space-y-6" onSubmit={handleRegister}>
-          <div>
-            <label className="block text-blue-900 text-sm font-medium mb-2">Email</label>
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="w-full px-4 py-3 rounded-xl bg-white/60 border border-blue-200
-                         text-gray-900 placeholder-gray-500
-                         focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={email}
-              onChange={handleEmailChange}
-              required
-            />
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-white via-white to-black/10 text-black flex items-center justify-center px-4">
+      <Card className="w-full max-w-md border-black/10 shadow-sm rounded-2xl">
+        <CardHeader className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="relative h-40 w-full">
+              <Image src={logo} alt="TimeWISE" fill className="object-contain" priority />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-blue-900 text-sm font-medium mb-2">Password</label>
-            <input
-              type="password"
-              placeholder="Enter your desired password"
-              className="w-full px-4 py-3 rounded-xl bg-white/60 border border-blue-200
-                         text-gray-900 placeholder-gray-500
-                         focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={password}
-              onChange={handlePasswordChange}
-              required
-            />
-          </div>
+          <CardTitle className="text-2xl font-semibold tracking-tight">
+            Create account
+          </CardTitle>
+          <CardDescription className="text-black/60">
+            Set up your account to start tracking attendance and work activity.
+          </CardDescription>
+        </CardHeader>
 
-          <div>
-            <label className="block text-blue-900 text-sm font-medium mb-2">Re-enter Password</label>
-            <input
-              type="password"
-              placeholder="Re-enter your password"
-              className="w-full px-4 py-3 rounded-xl bg-white/60 border border-blue-200
-                         text-gray-900 placeholder-gray-500
-                         focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={confirmPassword}
-              onChange={handleConfirmPasswordChange}
-              required
-            />
-          </div>
+        <CardContent className="space-y-6">
+          <Separator />
 
-          {password !== confirmPassword && (
-            <p className="text-red-600 mt-2">Passwords do not match.</p>
-          )}
+          <form onSubmit={handleRegister} className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="text-black/80">First name</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="Juan"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  className="h-11 rounded-xl border-black/15 focus-visible:ring-black/20"
+                />
+              </div>
 
-             <div>
-            <label className="block text-blue-900 text-sm font-medium mb-2">First Name</label>
-            <input
-              type="text"
-              placeholder="Enter your First Name"
-              className="w-full px-4 py-3 rounded-xl bg-white/60 border border-blue-200
-                         text-gray-900 placeholder-gray-500
-                         focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={firstName}
-              onChange={handleFirstNameChange}
-              required
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="text-black/80">Last name</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Dela Cruz"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  className="h-11 rounded-xl border-black/15 focus-visible:ring-black/20"
+                />
+              </div>
+            </div>
 
-            <div>
-            <label className="block text-blue-900 text-sm font-medium mb-2">Last Name</label>
-            <input
-              type="text"
-              placeholder="Enter your Last Name"
-              className="w-full px-4 py-3 rounded-xl bg-white/60 border border-blue-200
-                         text-gray-900 placeholder-gray-500
-                         focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={lastName}
-              onChange={handleLastNameChange}
-              required
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-black/80">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+                className="h-11 rounded-xl border-black/15 focus-visible:ring-black/20"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600
-                       hover:from-blue-600 hover:to-blue-700
-                       text-white font-semibold transition transform hover:-translate-y-1 shadow-lg cursor-pointer
-                       ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {isLoading ? "Registering..." : "Register"}
-          </button>
+            <div className="space-y-2">
+              <Label htmlFor="password" className="text-black/80">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Create a password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+                className="h-11 rounded-xl border-black/15 focus-visible:ring-black/20"
+              />
+            </div>
 
-          <p className="text-center text-sm text-blue-100 mt-6">
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-black/80">Confirm password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="Re-enter your password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                required
+                className="h-11 rounded-xl border-black/15 focus-visible:ring-black/20"
+              />
+              {!passwordsMatch && confirmPassword.length > 0 && (
+                <p className="text-sm text-red-600">Passwords do not match.</p>
+              )}
+            </div>
+
+            {error && (
+              <Alert variant="destructive" className="rounded-xl">
+                <AlertTitle>Registration failed</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Button
+              type="submit"
+              disabled={!canSubmit}
+              className="w-full h-11 rounded-xl bg-black text-white hover:bg-black/90 disabled:opacity-50"
+            >
+              {isLoading ? "Creating account..." : "Create account"}
+            </Button>
+          </form>
+
+          <div className="text-sm text-black/60">
             Already have an account?{" "}
-          <a href="/auth/login" className="text-blue-200 font-medium hover:underline">
-            Log In.
-          </a>
+            <Link
+              href="/auth/login"
+              className="text-black hover:underline underline-offset-4 font-medium"
+            >
+              Sign in
+            </Link>
+            .
+          </div>
+
+          <p className="text-xs text-black/40 leading-relaxed">
+            By signing up, you agree to the company policies and guidelines.
           </p>
-
-
-          {error && <p className="text-red-600 mt-4 text-center">{error}</p>}
-        </form>
-
-      </div>
+        </CardContent>
+      </Card>
     </div>
-    )
+  );
 }

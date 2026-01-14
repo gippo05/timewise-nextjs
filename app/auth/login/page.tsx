@@ -52,7 +52,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md border-black/10 shadow-sm rounded-2xl">
         <CardHeader className="space-y-2">
           <div className="flex items-center gap-3">
-            <div className="relative h-9 w-36">
+            <div className="relative h-40 w-100">
               <Image src={logo} alt="TimeWISE" fill className="object-contain" priority />
             </div>
           </div>
@@ -134,7 +134,7 @@ export default function LoginPage() {
           </div>
 
           <p className="text-xs text-black/40 leading-relaxed">
-            By signing in, you agree to your company’s internal policies. Humans love policies.
+            By signing in, you agree to your company’s internal policies.
           </p>
         </CardContent>
       </Card>
