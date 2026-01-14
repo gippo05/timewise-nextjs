@@ -1,121 +1,143 @@
-"use client"
+"use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import logo from "@/public/TimeWISE logo.png"
+import { createClient } from "@/lib/supabase/client";
 
+import logo from "@/public/TimeWISE logo.png";
 
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Separator } from "@/components/ui/separator";
 
 export default function LoginPage() {
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-    const [email, setEmail] = useState<string>("");
-    const [password, setPassword] = useState<string>("");
-    const [error, setError] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState<boolean>(false);
-    const router = useRouter();
+  const router = useRouter();
 
-    const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setEmail(e.target.value);
-    };
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
 
-    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setPassword(e.target.value);
-    };
+    const supabase = createClient();
 
-    const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setError(null);
-        const supabase = createClient();
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        // Handle login logic here
+      if (error) throw error;
 
-        try{
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error has occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-            if(error) throw error;
-            router.push("/dashboard");
-
-        } catch (error: unknown){
-            setError(error instanceof Error ? error.message : "An error has occurred");
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return(
-     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-200 via-blue-400 to-blue-600 px-4">
-      <div className="bg-white/30 backdrop-blur-md border border-white/40 rounded-2xl shadow-xl p-10 w-full max-w-md">
-        <div className="text-center mb-8">
-          <Image src={logo} alt="Logo" className="mx-auto mb-4" width={150} height={50} />
-          <h1 className="text-3xl font-extrabold text-blue-900 drop-shadow-sm">TimeWise</h1>
-          <p className="text-sm text-blue-100 mt-2">Smart Attendance & Productivity Tracker</p>
-        </div>
-
-        <form className="space-y-6" onSubmit={handleLogin}>
-          <div>
-            <label className="block text-blue-900 text-sm font-medium mb-2">Email</label>
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="w-full px-4 py-3 rounded-xl bg-white/60 border border-blue-200
-                         text-gray-900 placeholder-gray-500
-                         focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={email}
-              onChange={handleEmailChange}
-              required
-            />
+  return (
+    <div className="min-h-screen bg-linear-to-b from-white via-white to-black/10 text-black flex items-center justify-center px-4">
+      <Card className="w-full max-w-md border-black/10 shadow-sm rounded-2xl">
+        <CardHeader className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="relative h-9 w-36">
+              <Image src={logo} alt="TimeWISE" fill className="object-contain" priority />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-blue-900 text-sm font-medium mb-2">Password</label>
-            <input
-              type="password"
-              placeholder="Enter your password"
-              className="w-full px-4 py-3 rounded-xl bg-white/60 border border-blue-200
-                         text-gray-900 placeholder-gray-500
-                         focus:outline-none focus:ring-2 focus:ring-blue-400"
-              value={password}
-              onChange={handlePasswordChange}
-              required
-            />
+          <CardTitle className="text-2xl font-semibold tracking-tight">
+            Sign in
+          </CardTitle>
+          <CardDescription className="text-black/60">
+            Use your email and password to access your dashboard.
+          </CardDescription>
+        </CardHeader>
+
+        <CardContent className="space-y-6">
+          <Separator />
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-black/80">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="name@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+                className="h-11 rounded-xl border-black/15 focus-visible:ring-black/20"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-black/80">Password</Label>
+                <Link
+                  href="#"
+                  className="text-xs text-black/60 hover:text-black underline-offset-4 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+                className="h-11 rounded-xl border-black/15 focus-visible:ring-black/20"
+              />
+            </div>
+
+            {error && (
+              <Alert variant="destructive" className="rounded-xl">
+                <AlertTitle>Login failed</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-11 rounded-xl bg-black text-white hover:bg-black/90"
+            >
+              {isLoading ? "Signing in..." : "Sign in"}
+            </Button>
+          </form>
+
+          <div className="text-sm text-black/60">
+            New user?{" "}
+            <Link
+              href="/auth/register"
+              className="text-black hover:underline underline-offset-4 font-medium"
+            >
+              Create an account
+            </Link>
+            .
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600
-                       hover:from-blue-600 hover:to-blue-700
-                       text-white font-semibold transition transform hover:-translate-y-1 shadow-lg cursor-pointer
-                       ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-          >
-            {isLoading ? "Logging in..." : "Login"}
-          </button>
-
-         
-
-          {error && <p className="text-red-600 mt-4 text-center">{error}</p>}
-        </form>
-
-        <p className="text-center text-sm text-blue-100 mt-6">
-          New User?{" "}
-          <a href="/auth/register" className="text-blue-200 font-medium hover:underline">
-            Sign up.
-          </a>
+          <p className="text-xs text-black/40 leading-relaxed">
+            By signing in, you agree to your company’s internal policies. Humans love policies.
           </p>
-
-        <p className="text-center text-sm text-blue-100 mt-6">
-          Forgot password?{" "}
-          <a href="#" className="text-blue-200 font-medium hover:underline">
-            Reset
-          </a>
-        </p>
-      </div>
+        </CardContent>
+      </Card>
     </div>
-    )
+  );
 }

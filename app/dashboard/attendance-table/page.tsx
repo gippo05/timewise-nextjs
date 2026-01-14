@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client"
-import AttendanceTable from "./attendanceTable";
+import AttendanceTable from "../../../components/attendanceTable";
 
 
 
