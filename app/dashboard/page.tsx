@@ -2,8 +2,11 @@
 
 import ClockCard from "@/components/ClockCard";
 import WorkedHoursCard from "@/components/ui/WorkedHoursCard";
-import { useEffect, useMemo, useState } from "react";
+import ActivityTracker from "@/components/ActivityTracker";
+
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+
 
 const supabase = createClient();
 
@@ -62,19 +65,35 @@ export default function DashboardPage() {
 
   return (
     <>
-      <div className="m-10">
+      <div className="px-5 py-10">
         <h2 className="text-3xl">Welcome back, {name}!</h2>
       </div>
 
-      <div className="m-5 flex w-full gap-4">
-        <div className="w-150">
-          <ClockCard />
-        </div>
 
-        <div className="w-full">
-          <WorkedHoursCard attendance={attendance} isLoading={isLoadingAttendance} />
+          <div className="px-5 pb-10">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[400px_minmax(0,900px)]">
+          
+          {/* Clock */}
+          <div className="min-w-0">
+            <ClockCard />
+          </div>
+
+          {/* Activity + Hours group */}
+          <div className="grid grid-cols-1 gap-4 min-w-0 lg:grid-cols-[minmax(0,400px)_260px] lg:items-start">
+            <div className="min-w-0">
+              <ActivityTracker />
+            </div>
+
+            <div className="min-w-0">
+              <WorkedHoursCard
+                attendance={attendance}
+                isLoading={isLoadingAttendance}
+              />
+            </div>
+          </div>
+
         </div>
-      </div>
+    </div>
     </>
   );
 }
