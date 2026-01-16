@@ -8,7 +8,7 @@ export default async function AttendanceTablePage() {
 // Create supabase
 const supabase = createClient();
 
-// Fetch all attendance record (Login, Break, End Break, Logout)
+// Fetch all attendance record (Login, Breaks, Logout)
 const {data: attendance, error} = await supabase
 .from('attendance')
 .select(`*,

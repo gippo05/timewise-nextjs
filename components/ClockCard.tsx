@@ -1,28 +1,36 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 const supabase = createClient();
 
+type AttendanceRow = {
+  id: string;
+  clock_in: string | null;
+  break: string | null;
+  end_break: string | null;
+  second_break: string | null;
+  end_second_break: string | null;
+  clock_out: string | null;
+};
 
+type ClockState = "clocked_out" | "working" | "on_break";
+
+function formatTime(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
 
 export default function ClockCard() {
-  const [temporaryStatus, setTemporaryStatus] = useState<string>("");
-
-
+  const [userId, setUserId] = useState<string | null>(null);
+  const [active, setActive] = useState<AttendanceRow | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActing, setIsActing] = useState(false);
 
   const today = useMemo(() => {
     const d = new Date();
@@ -34,83 +42,203 @@ export default function ClockCard() {
     return `${days[d.getDay()]}, ${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  // Fetch + set state, AND return the row so other functions can use it
+  async function refreshActiveAttendance(uid: string): Promise<AttendanceRow | null> {
+    const { data, error } = await supabase
+      .from("attendance")
+      .select("id, clock_in, break, end_break, second_break, end_second_break, clock_out")
+      .eq("user_id", uid)
+      .is("clock_out", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
+    if (error) {
+      console.error("Failed to fetch active attendance:", error);
+      setActive(null);
+      return null;
+    }
+
+    const row = (data ?? null) as AttendanceRow | null;
+    setActive(row);
+    return row;
+  }
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) console.error("auth.getUser error:", error);
+
+        const uid = user?.id ?? null;
+        setUserId(uid);
+
+        if (uid) await refreshActiveAttendance(uid);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, []);
+
+  const state: ClockState = useMemo(() => {
+    if (!active?.clock_in) return "clocked_out";
+
+    const onFirstBreak = !!active.break && !active.end_break;
+    const onSecondBreak = !!active.second_break && !active.end_second_break;
+
+    return (onFirstBreak || onSecondBreak) ? "on_break" : "working";
+  }, [active]);
+
+  const statusLine = useMemo(() => {
+    if (!active?.clock_in) return "Status: Clocked Out";
+
+    if (state === "on_break") {
+      const breakStart =
+        (active.break && !active.end_break && active.break) ||
+        (active.second_break && !active.end_second_break && active.second_break);
+
+      return `Status: On Break • started ${breakStart ? formatTime(breakStart) : ""}`;
+    }
+
+    return `Status: Working • clocked in ${active.clock_in ? formatTime(active.clock_in) : ""}`;
+  }, [active, state]);
+
+  async function clockIn() {
+    if (!userId) return;
+
+    setIsActing(true);
     try {
       const timestamp = new Date().toISOString();
-      let attendanceId: string | undefined;
 
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id;
+      const { data, error } = await supabase
+        .from("attendance")
+        .insert([{ clock_in: timestamp, user_id: userId }])
+        .select("id, clock_in, break, end_break, second_break, end_second_break, clock_out")
+        .single();
 
-      if (!userId) {
-        console.error("No logged-in user");
+      if (error) {
+        console.error("Clock in error:", error);
         return;
       }
 
-      // 1) Create an attendance row when Clocked-in
-      if (temporaryStatus === "Clocked-in") {
-        const { data, error } = await supabase
-          .from("attendance")
-          .insert([{ clock_in: timestamp, user_id: userId }])
-          .select("id")
-          .single();
-
-        if (error) {
-          console.error("Insert error:", error);
-          return;
-        }
-
-        if (!data) {
-          console.error("No attendance returned");
-          return;
-        }
-
-        attendanceId = data.id;
-      } else {
-        // 2) Otherwise, update the active attendance row
-        const { data, error } = await supabase
-          .from("attendance")
-          .select("id")
-          .eq("user_id", userId)
-          .is("clock_out", null)
-          .limit(1)
-          .single();
-
-        if (error || !data) {
-          console.error("Failed to find active attendance:", error, "Data:", data);
-          return;
-        }
-
-        attendanceId = data.id;
-      }
-
-      const statusToColumnMap: Record<string, string> = {
-        Break: "break",
-        "End-Break": "end_break",
-        "Clocked-out": "clock_out",
-      };
-
-      const columnToUpdate = statusToColumnMap[temporaryStatus];
-
-      if (columnToUpdate) {
-        const { error } = await supabase
-          .from("attendance")
-          .update({ [columnToUpdate]: timestamp })
-          .eq("id", attendanceId);
-
-        if (error) {
-          console.error("Update error:", error);
-          return;
-        }
-      }
-
-      setTemporaryStatus("");
-    } catch (err) {
-      console.error("Error:", err);
+      setActive((data ?? null) as AttendanceRow | null);
+    } finally {
+      setIsActing(false);
     }
-  };
+  }
+
+  async function startBreakAuto(uid: string) {
+    const current = await refreshActiveAttendance(uid);
+    if (!current?.id) throw new Error("No active attendance row");
+
+    const now = new Date().toISOString();
+    const updates: Record<string, any> = {};
+
+    // Pick first available break slot
+    if (!current.break) {
+      updates.break = now;
+      updates.end_break = null;
+    } else if (!current.second_break) {
+      updates.second_break = now;
+      updates.end_second_break = null;
+    } else {
+      return { ok: false, reason: "Both breaks already used" };
+    }
+
+    const { error } = await supabase
+      .from("attendance")
+      .update(updates)
+      .eq("id", current.id);
+
+    if (error) throw error;
+
+    await refreshActiveAttendance(uid);
+    return { ok: true };
+  }
+
+  async function endBreakAuto(uid: string) {
+    const current = await refreshActiveAttendance(uid);
+    if (!current?.id) throw new Error("No active attendance row");
+
+    const now = new Date().toISOString();
+    const updates: Record<string, any> = {};
+
+    // End whichever break is active (started but not ended)
+    if (current.break && !current.end_break) {
+      updates.end_break = now;
+    } else if (current.second_break && !current.end_second_break) {
+      updates.end_second_break = now;
+    } else {
+      return { ok: false, reason: "No active break to end" };
+    }
+
+    const { error } = await supabase
+      .from("attendance")
+      .update(updates)
+      .eq("id", current.id);
+
+    if (error) throw error;
+
+    await refreshActiveAttendance(uid);
+    return { ok: true };
+  }
+
+  async function clockOut() {
+    if (!userId) return;
+    if (!active?.id) return;
+
+    setIsActing(true);
+    try {
+      const timestamp = new Date().toISOString();
+
+      const { error } = await supabase
+        .from("attendance")
+        .update({ clock_out: timestamp })
+        .eq("id", active.id);
+
+      if (error) {
+        console.error("Clock out error:", error);
+        return;
+      }
+
+      setActive(null);
+    } finally {
+      setIsActing(false);
+    }
+  }
+
+  // Button handlers (wrap async and pass userId)
+  async function handleStartBreak() {
+    if (!userId) return;
+
+    setIsActing(true);
+    try {
+      const res = await startBreakAuto(userId);
+      if (!res.ok) console.log(res.reason);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsActing(false);
+    }
+  }
+
+  async function handleEndBreak() {
+    if (!userId) return;
+
+    setIsActing(true);
+    try {
+      const res = await endBreakAuto(userId);
+      if (!res.ok) console.log(res.reason);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsActing(false);
+    }
+  }
+
+  const secondBreakUsed =
+  !!active?.second_break && !!active?.end_second_break;
+
 
   return (
     <Card className="w-full max-w-sm rounded-2xl border-black/10 shadow-sm">
@@ -118,44 +246,84 @@ export default function ClockCard() {
         <CardTitle className="text-base sm:text-lg font-semibold tracking-tight text-black">
           Clock status
         </CardTitle>
-        <p className="text-xs text-black/60">
-          {today}
-        </p>
+        <p className="text-xs text-black/60">{today}</p>
       </CardHeader>
 
       <CardContent className="space-y-4">
         <Separator />
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="space-y-2">
-            <Label className="text-black/80">Select action</Label>
+        <div className="space-y-3">
+          <p className="text-sm text-black/80">
+            {isLoading ? "Loading status..." : statusLine}
+          </p>
 
-            <Select value={temporaryStatus} onValueChange={setTemporaryStatus}>
-              <SelectTrigger className="h-11 rounded-xl border-black/15 focus-visible:ring-black/20">
-                <SelectValue placeholder="Choose status" />
-              </SelectTrigger>
+          {/* Actions */}
+          {state === "clocked_out" && (
+            <Button
+              onClick={clockIn}
+              disabled={isLoading || isActing || !userId}
+              className="w-full h-11 rounded-xl bg-black text-white hover:bg-black/90 disabled:opacity-50"
+            >
+              Clock In
+            </Button>
+          )}
 
-              <SelectContent>
-                <SelectItem value="Clocked-in">Clock in</SelectItem>
-                <SelectItem value="Break">Start break</SelectItem>
-                <SelectItem value="End-Break">End break</SelectItem>
-                <SelectItem value="Clocked-out">Clock out</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            {state === "working" && (
+              <div className="flex gap-2">
+                {secondBreakUsed ? (
+                  <Button
+                    disabled
+                    className="flex-1 h-11 rounded-xl bg-black/40 text-white cursor-not-allowed"
+                  >
+                    Breaks Used
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleStartBreak}
+                    disabled={isLoading || isActing}
+                    className="flex-1 h-11 rounded-xl bg-black text-white hover:bg-black/90 disabled:opacity-50"
+                  >
+                    Start Break
+                  </Button>
+                )}
 
-          <Button
-            type="submit"
-            disabled={!temporaryStatus}
-            className="w-full h-11 rounded-xl bg-black text-white hover:bg-black/90 disabled:opacity-50 cursor-pointer"
-          >
-            Change Status
-          </Button>
+                <Button
+                  onClick={clockOut}
+                  disabled={isLoading || isActing}
+                  variant="outline"
+                  className="flex-1 h-11 rounded-xl border-black/20"
+                >
+                  Clock Out
+                </Button>
+              </div>
+            )}
+
+
+          {state === "on_break" && (
+            <div className="space-y-2">
+              <Button
+                onClick={handleEndBreak}
+                disabled={isLoading || isActing}
+                className="w-full h-11 rounded-xl bg-black text-white hover:bg-black/90 disabled:opacity-50"
+              >
+                End Break
+              </Button>
+
+              <Button
+                onClick={clockOut}
+                disabled={isLoading || isActing}
+                variant="outline"
+                className="w-full h-11 rounded-xl border-black/20"
+              >
+                Clock Out
+              </Button>
+            </div>
+          )}
 
           <p className="text-[11px] text-black/40 leading-relaxed">
             Tip: Keep this card small. The table and summaries should do the heavy lifting.
           </p>
-        </form>
+        </div>
       </CardContent>
     </Card>
   );

@@ -16,24 +16,34 @@ export default function AttendanceTable({ attendance }) {
   );
 
 
-  function calculateWorkedHours(log) {
-    if (!log.clock_in || !log.clock_out) return null;
+ function calculateWorkedHours(log) {
+  if (!log.clock_in || !log.clock_out) return null;
 
-    const clockIn = new Date(log.clock_in).getTime();
-    const clockOut = new Date(log.clock_out).getTime();
+  const clockIn = new Date(log.clock_in).getTime();
+  const clockOut = new Date(log.clock_out).getTime();
 
-    let breakDuration = 0;
+  let breakDuration = 0;
 
-    if (log.break && log.end_break) {
-      breakDuration =
-        new Date(log.end_break).getTime() -
-        new Date(log.break).getTime();
-    }
-
-    const workedMs = clockOut - clockIn - breakDuration;
-
-    return workedMs / (1000 * 60 * 60); // decimal hours
+  // First break
+  if (log.break && log.end_break) {
+    breakDuration +=
+      new Date(log.end_break).getTime() - new Date(log.break).getTime();
   }
+
+  // Second break
+  if (log.second_break && log.end_second_break) {
+    breakDuration +=
+      new Date(log.end_second_break).getTime() - new Date(log.second_break).getTime();
+  }
+
+  const workedMs = clockOut - clockIn - breakDuration;
+
+  // Optional guard: prevent negative results if data is messed up
+  if (workedMs < 0) return 0;
+
+  return workedMs / (1000 * 60 * 60);
+}
+
 
   function formatWorkedHours(hoursDecimal) {
     if (hoursDecimal === null) return "—";
@@ -53,8 +63,10 @@ export default function AttendanceTable({ attendance }) {
             <tr className="text-left text-sm font-semibold text-gray-700">
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Login</th>
-              <th className="px-4 py-3">Break</th>
-              <th className="px-4 py-3">End Break</th>
+              <th className="px-4 py-3">First Break</th>
+              <th className="px-4 py-3">End First Break</th>
+              <th className="px-4 py-3">Second Break</th>
+              <th className="px-4 py-3">End Second Break</th>
               <th className="px-4 py-3">Logout</th>
               <th className="px-4 py-3">Total Hours</th>
               <th className="px-4 py-3">Date</th>
@@ -104,6 +116,26 @@ export default function AttendanceTable({ attendance }) {
                       : "—"}
                   </td>
 
+                    <td className="px-4 py-3">
+                    {log.second_break
+                      ? new Date(log.second_break).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                      : "—"}
+                  </td>
+
+                    <td className="px-4 py-3">
+                    {log.end_second_break
+                      ? new Date(log.end_second_break).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                      : "—"}
+                  </td>
+
                   <td className="px-4 py-3">
                     {log.clock_out
                       ? new Date(log.clock_out).toLocaleTimeString([], {
@@ -128,7 +160,7 @@ export default function AttendanceTable({ attendance }) {
             ) : (
               <tr>
                 <td
-                  colSpan="7"
+                  colSpan="9"
                   className="px-4 py-6 text-center text-gray-500"
                 >
                   No attendance records found
