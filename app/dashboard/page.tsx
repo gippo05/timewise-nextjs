@@ -4,6 +4,7 @@ import ClockCard from "@/components/ClockCard";
 import WorkedHoursCard from "@/components/ui/WorkedHoursCard";
 import ActivityTracker from "@/components/ActivityTracker";
 import AttendanceTable from "@/components/attendanceTable";
+import MoreActions from "@/components/MoreActions";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -70,33 +71,30 @@ export default function DashboardPage() {
         <h2 className="text-3xl">Welcome back, {name}!</h2>
       </div>
 
-
           <div className="px-5 pb-10">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[400px_minmax(0,900px)]">
-          
-          {/* Clock */}
-          <div className="min-w-0">
-            <ClockCard />
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[400px_minmax(0,1fr)] items-stretch">
+
+              <div className="min-w-0 h-full">
+                <ClockCard />
+              </div>
+                    <div className="grid gap-8 min-w-0 items-stretch lg:grid-cols-3 lg:auto-rows-fr w-full">
+                        <div className="min-w-0 h-full">
+                          <ActivityTracker />
+                        </div>
+
+                        <div className="min-w-0 h-full">
+                          <MoreActions />
+                        </div>
+
+                        <div className="min-w-0 h-full">
+                          <WorkedHoursCard attendance={attendance} isLoading={isLoadingAttendance} />
+                        </div>
+                      </div>
+              
+
+            </div>
           </div>
 
-          {/* Activity + Hours group */}
-          <div className="grid grid-cols-1 gap-4 min-w-0 lg:grid-cols-[minmax(0,400px)_260px] lg:items-start">
-            <div className="min-w-0">
-              <ActivityTracker />
-            </div>
-
-            <div className="min-w-0">
-              <WorkedHoursCard
-                attendance={attendance}
-                isLoading={isLoadingAttendance}
-              />
-            </div>
-          </div>
-
-          
-
-        </div>
-    </div>
 
     <div className="w-full">
             <div className="w-full p-5">

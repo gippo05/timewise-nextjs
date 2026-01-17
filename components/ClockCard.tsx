@@ -241,7 +241,7 @@ export default function ClockCard() {
 
 
   return (
-    <Card className="w-full max-w-sm rounded-2xl border-black/10 shadow-sm">
+    <Card className="w-full max-w-sm rounded-2xl border-black/10 shadow-sm h-full">
       <CardHeader className="space-y-1">
         <CardTitle className="text-base sm:text-lg font-semibold tracking-tight text-black">
           Clock status

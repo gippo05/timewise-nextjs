@@ -56,7 +56,7 @@ export default function WorkedHoursCard({
   const mins = totalMinutes % 60;
 
   return (
-    <Card className="w-40 max-w-sm rounded-2xl border-black/10 shadow-sm h-45">
+    <Card className="w-full rounded-2xl border-black/10 shadow-sm h-full">
       <CardHeader className="space-y-1">
         <CardTitle className="text-base sm:text-lg font-semibold tracking-tight text-black text-center">
           Total Worked Hours
