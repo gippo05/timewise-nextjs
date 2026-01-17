@@ -3,6 +3,7 @@
 import ClockCard from "@/components/ClockCard";
 import WorkedHoursCard from "@/components/ui/WorkedHoursCard";
 import ActivityTracker from "@/components/ActivityTracker";
+import AttendanceTable from "@/components/attendanceTable";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
@@ -47,7 +48,7 @@ export default function DashboardPage() {
 
       const { data, error } = await supabase
         .from("attendance")
-        .select("id, user_id, created_at, clock_in, break, end_break, second_break, end_second_break, clock_out")
+        .select("id, user_id, created_at, clock_in, break, end_break, second_break, end_second_break, clock_out, profiles(first_name, last_name)")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -92,8 +93,17 @@ export default function DashboardPage() {
             </div>
           </div>
 
+          
+
         </div>
     </div>
+
+    <div className="w-full">
+            <div className="w-full p-5">
+              <AttendanceTable attendance={attendance} />
+            </div>
+              
+          </div>
     </>
   );
 }
