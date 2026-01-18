@@ -48,7 +48,7 @@ export default function SideBar() {
       className={cn(
         "w-64 h-screen sticky top-0",
         "bg-white text-black",
-        "border-r border-black/10",
+        "border-r border-indigo-200",
         "flex flex-col"
       )}
     >
@@ -67,7 +67,7 @@ export default function SideBar() {
         </div>
 
         <p className="mt-3 text-xs text-black/50">
-          Attendance
+          Your attendance one-stop shop
         </p>
       </div>
 
@@ -90,12 +90,12 @@ export default function SideBar() {
                   "text-sm font-medium",
                   "transition-colors",
                   isActive
-                    ? "bg-black text-white hover:bg-black/90 hover:text-white"
-                    : "text-black/70 hover:bg-black/5 hover:text-black"
+                    ? "bg-indigo-400 text-white hover:bg-indigo-300 hover:text-white"
+                    : "text-black/70 hover:bg-indigo-200 hover:text-black"
                 )}
               >
                 <Link href={item.path}>
-                  <Icon className={cn("h-4 w-4", isActive ? "text-white" : "text-black/60")} />
+                  <Icon className={cn("h-4 w-4", isActive ? "text-white" : "text-indigo-600")} />
                   <span>{item.label}</span>
                 </Link>
               </Button>
@@ -115,10 +115,10 @@ export default function SideBar() {
           className={cn(
             "w-full justify-start gap-3 rounded-xl px-3 py-5",
             "text-sm font-semibold",
-            "text-black/70 hover:bg-black/5 hover:text-black"
+            "text-black/70 hover:bg-indigo-200 hover:text-black"
           )}
         >
-          <LogOut className="h-4 w-4 text-black/60" />
+          <LogOut className="h-4 w-4 text-indigo-600" />
           Logout
         </Button>
 

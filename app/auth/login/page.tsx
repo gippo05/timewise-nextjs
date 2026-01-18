@@ -48,7 +48,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-white via-white to-black/10 text-black flex items-center justify-center px-4">
+    <div className="min-h-screen bg-linear-to-b from-white via-white to-indigo-300 text-black flex items-center justify-center px-4">
       <Card className="w-full max-w-md border-black/10 shadow-sm rounded-2xl">
         <CardHeader className="space-y-2">
           <div className="flex items-center gap-3">
@@ -116,22 +116,13 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full h-11 rounded-xl bg-black text-white hover:bg-black/90"
+              className="w-full h-11 rounded-xl bg-indigo-400 text-white hover:bg-indigo-300"
             >
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
           </form>
 
-          <div className="text-sm text-black/60">
-            New user?{" "}
-            <Link
-              href="/auth/register"
-              className="text-black hover:underline underline-offset-4 font-medium"
-            >
-              Create an account
-            </Link>
-            .
-          </div>
+         
 
           <p className="text-xs text-black/40 leading-relaxed">
             By signing in, you agree to your company’s internal policies.

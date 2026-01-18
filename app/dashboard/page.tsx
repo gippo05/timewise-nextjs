@@ -78,9 +78,7 @@ export default function DashboardPage() {
                 <ClockCard />
               </div>
                     <div className="grid gap-8 min-w-0 items-stretch lg:grid-cols-3 lg:auto-rows-fr w-full">
-                        <div className="min-w-0 h-full">
-                          <ActivityTracker />
-                        </div>
+                       
 
                         <div className="min-w-0 h-full">
                           <MoreActions />

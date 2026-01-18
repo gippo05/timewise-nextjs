@@ -262,7 +262,7 @@ export default function ClockCard() {
             <Button
               onClick={clockIn}
               disabled={isLoading || isActing || !userId}
-              className="w-full h-11 rounded-xl bg-black text-white hover:bg-black/90 disabled:opacity-50"
+              className="w-full h-11 rounded-xl bg-indigo-400 text-white hover:bg-indigo-200 disabled:opacity-50"
             >
               Clock In
             </Button>
@@ -321,7 +321,7 @@ export default function ClockCard() {
           )}
 
           <p className="text-[11px] text-black/40 leading-relaxed">
-            Tip: Keep this card small. The table and summaries should do the heavy lifting.
+            Tip: Always double check if your attendance has been logged.
           </p>
         </div>
       </CardContent>

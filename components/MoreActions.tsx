@@ -2,6 +2,8 @@
 
 
 import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
+import { Button } from "./ui/button";
+import { CalendarPlus, Sheet, BadgeDollarSign, BanknoteArrowUp } from "lucide-react";
 
 export default function MoreActions(){
 
@@ -13,10 +15,30 @@ export default function MoreActions(){
         </CardTitle>
       </CardHeader>
 
-      <CardContent>
-       
-    
+            <CardContent>
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" className="flex items-center gap-3 w-full">
+            <CalendarPlus className="h-5 w-5" />
+            Request Leave
+          </Button>
+
+          <Button variant="outline" className="flex items-center gap-3 w-full">
+            <Sheet className="h-5 w-5" />
+            Items Masterlist
+          </Button>
+
+          <Button variant="outline" className="flex items-center gap-3 w-full">
+            <BadgeDollarSign className="h-5 w-5" />
+            Sales Sheet
+          </Button>
+
+          <Button variant="outline" className="flex items-center gap-3 w-full">
+            <BanknoteArrowUp className="h-5 w-5" />
+            Capital & Pricelist
+          </Button>
+        </div>
       </CardContent>
+
     </Card>
   );
 }

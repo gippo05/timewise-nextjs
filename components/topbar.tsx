@@ -20,7 +20,7 @@ const TopBar: React.FC = () => {
   const currentItem = SidebarMenu.find((item) => item.link === pathname);
 
   return (
-    <div className="w-full h-16 bg-linear-to-r from-white to-black flex items-center justify-between px-6 shadow-md">
+    <div className="w-full h-16 bg-linear-to-r from-white to-indigo-600 flex items-center justify-between px-6 shadow-md">
       <h1 className="text-xl font-semibold">
         {currentItem ? currentItem.title : "Dashboard"}
       </h1>
