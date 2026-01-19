@@ -25,7 +25,8 @@ type AttendanceRow = {
 };
 
 export default function DashboardPage() {
-  const [name, setName] = useState<string>("");
+  const [first_name, setFirstName] = useState<string>("");
+  const [last_name, setLastName] = useState<string>("");
   const [userId, setUserId] = useState<string | null>(null);
 
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
@@ -36,7 +37,8 @@ export default function DashboardPage() {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error) console.error(error);
 
-      setName((user?.user_metadata?.first_name as string | undefined) ?? "");
+      setFirstName((user?.user_metadata?.first_name as string | undefined) ?? "");
+      setLastName((user?.user_metadata?.last_name as string | undefined) ?? "");
       setUserId(user?.id ?? null);
     })();
   }, []);
@@ -68,7 +70,7 @@ export default function DashboardPage() {
   return (
     <>
       <div className="px-5 py-10">
-        <h2 className="text-3xl">Welcome back, {name}!</h2>
+        <h2 className="text-3xl">Welcome back, {first_name} {last_name}!</h2>
       </div>
 
           <div className="px-5 pb-10">
