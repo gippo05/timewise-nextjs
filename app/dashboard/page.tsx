@@ -79,17 +79,17 @@ export default function DashboardPage() {
               <div className="min-w-0 h-full">
                 <ClockCard />
               </div>
-                    <div className="grid gap-8 min-w-0 items-stretch lg:grid-cols-3 lg:auto-rows-fr w-full">
-                       
+              <div className="grid gap-8 min-w-0 items-stretch w-full
+                [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]">
+               <div className="min-w-0 h-full">
+                  <MoreActions />
+                </div>
 
-                        <div className="min-w-0 h-full">
-                          <MoreActions />
-                        </div>
+                <div className="min-w-0 h-full">
+                  <WorkedHoursCard attendance={attendance} isLoading={isLoadingAttendance} />
+                </div>
+              </div>
 
-                        <div className="min-w-0 h-full">
-                          <WorkedHoursCard attendance={attendance} isLoading={isLoadingAttendance} />
-                        </div>
-                      </div>
               
 
             </div>
