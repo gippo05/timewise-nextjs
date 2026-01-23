@@ -61,6 +61,7 @@ export default function AttendanceTable({ attendance }) {
         <table className="min-w-full border-collapse">
           <thead className="bg-gray-100 sticky top-0">
             <tr className="text-left text-sm font-semibold text-gray-700">
+              <th className="px-4 py-3">Date</th>
               <th className="px-4 py-3">Name</th>
               <th className="px-4 py-3">Login</th>
               <th className="px-4 py-3">First Break</th>
@@ -69,7 +70,8 @@ export default function AttendanceTable({ attendance }) {
               <th className="px-4 py-3">End Second Break</th>
               <th className="px-4 py-3">Logout</th>
               <th className="px-4 py-3">Total Hours</th>
-              <th className="px-4 py-3">Date</th>
+              <th className="px-4 py-3">Late Minutes</th>
+              
             </tr>
           </thead>
 
@@ -82,6 +84,13 @@ export default function AttendanceTable({ attendance }) {
                     index % 2 === 0 ? "bg-white" : "bg-gray-50"
                   } hover:bg-gray-100 transition`}
                 >
+
+                   <td className="px-4 py-3 text-gray-600">
+                    {log.created_at
+                      ? new Date(log.created_at).toLocaleDateString()
+                      : "—"}
+                  </td>
+                  
                   <td className="px-4 py-3 font-medium text-gray-900">
                     {log.profiles?.first_name} {log.profiles?.last_name}
                   </td>
@@ -146,14 +155,13 @@ export default function AttendanceTable({ attendance }) {
                       : "—"}
                   </td>
 
+                  <td className="px-4 py-3 text-center font-medium">
+                      {typeof log.late_minutes === "number" ? `${log.late_minutes} min` : "—"}
+                    </td>
+
+
                   <td className="px-4 py-3 font-semibold text-gray-900">
                     {formatWorkedHours(calculateWorkedHours(log))}
-                  </td>
-
-                  <td className="px-4 py-3 text-gray-600">
-                    {log.created_at
-                      ? new Date(log.created_at).toLocaleDateString()
-                      : "—"}
                   </td>
                 </tr>
               ))

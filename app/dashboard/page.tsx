@@ -51,7 +51,7 @@ export default function DashboardPage() {
 
       const { data, error } = await supabase
         .from("attendance")
-        .select("id, user_id, created_at, clock_in, break, end_break, second_break, end_second_break, clock_out, profiles(first_name, last_name)")
+        .select("id, user_id, created_at, clock_in, break, end_break, second_break, end_second_break, clock_out, late_minutes, profiles(first_name, last_name)")
         .eq("user_id", userId)
         .order("created_at", { ascending: false })
         .limit(50);
@@ -80,7 +80,7 @@ export default function DashboardPage() {
                 <ClockCard />
               </div>
               <div className="grid gap-8 min-w-0 items-stretch w-full
-                [grid-template-columns:repeat(auto-fit,minmax(320px,1fr))]">
+                grid-cols-[repeat(auto-fit,minmax(320px,1fr))]">
                <div className="min-w-0 h-full">
                   <MoreActions />
                 </div>

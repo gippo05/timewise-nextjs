@@ -58,6 +58,7 @@ export default async function AttendanceTablePage() {
       second_break,
       end_second_break,
       clock_out,
+      late_minutes,
       profiles (
         first_name,
         last_name,
