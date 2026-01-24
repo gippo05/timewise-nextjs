@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import UpdateProfile from "@/components/UpdateProfile";
+import UpdatePassword from "@/components/UpdatePassword";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -23,5 +24,12 @@ export default async function SettingsPage() {
 
   if (profileError) console.error(profileError);
 
-  return <UpdateProfile userId={user.id} profile={profile} />;
+  return (
+  <>
+  <UpdateProfile userId={user.id} profile={profile} />
+  <UpdatePassword user={user}/>
+
+
+</>
+)
 }
