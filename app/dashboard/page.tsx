@@ -2,10 +2,8 @@
 
 import ClockCard from "@/components/ClockCard";
 import WorkedHoursCard from "@/components/ui/WorkedHoursCard";
-import ActivityTracker from "@/components/ActivityTracker";
 import AttendanceTable from "@/components/attendanceTable";
 import MoreActions from "@/components/MoreActions";
-
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
@@ -36,12 +34,32 @@ export default function DashboardPage() {
     (async () => {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error) console.error(error);
-
-      setFirstName((user?.user_metadata?.first_name as string | undefined) ?? "");
-      setLastName((user?.user_metadata?.last_name as string | undefined) ?? "");
       setUserId(user?.id ?? null);
+
+      
     })();
   }, []);
+
+useEffect(() => {
+  if (!userId) return;
+
+  (async () => {
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("first_name, last_name")
+      .eq("id", userId)
+      .single(); // IMPORTANT
+
+    if (error) {
+      console.error("Fetch profile error:", error);
+      return;
+    }
+
+    setFirstName(profile?.first_name ?? "");
+    setLastName(profile?.last_name ?? "");
+  })();
+}, [userId]);
+
 
   useEffect(() => {
     if (!userId) return;
