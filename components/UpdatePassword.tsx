@@ -7,14 +7,18 @@ import { Input } from "./ui/input";
 import { Label } from "@radix-ui/react-label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+
+
 
 type UserLike = {
   id: string;
-  email: string | null;
+    email: string | null | undefined;
 };
 
 export default function UpdatePassword({ user }: { user: UserLike }) {
   const supabase = createClient();
+  const router = useRouter();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -86,7 +90,7 @@ export default function UpdatePassword({ user }: { user: UserLike }) {
 
       // optional: redirect to login page if you have one
       // router.push("/login");
-
+      router.push("/auth/login")
       // clear fields
       setCurrentPassword("");
       setNewPassword("");

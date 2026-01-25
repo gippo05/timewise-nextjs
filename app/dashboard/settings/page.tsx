@@ -26,8 +26,25 @@ export default async function SettingsPage() {
 
   return (
   <>
-  <UpdateProfile userId={user.id} profile={profile} />
-  <UpdatePassword user={user}/>
+
+  <div className="px-5 pb-10">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[400px_minmax(0,1fr)] items-stretch">
+  
+                <div className="min-w-0 h-full">
+                  <UpdateProfile userId={user.id} profile={profile}/> 
+                </div>
+                <div className="grid gap-8 min-w-0 items-stretch w-full
+                  grid-cols-[repeat(auto-fit,minmax(500px,1fr))]">
+                 <div className="min-w-0 h-full">
+                    <UpdatePassword user={user} />
+                  </div>
+                </div>
+  
+                
+  
+              </div>
+            </div>
+ 
 
 
 </>
