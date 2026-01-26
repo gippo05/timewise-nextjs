@@ -9,14 +9,11 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-import {
-  LayoutDashboard,
-  Table2,
-  Settings,
-  LogOut,
-} from "lucide-react";
+import { toast } from "sonner";
 
+import { LayoutDashboard, Table2, Settings, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import main_logo from "@/public/TimeWISE logo.png";
 
@@ -30,6 +27,45 @@ export default function SideBar() {
   const router = useRouter();
   const pathname = usePathname();
 
+  const supabase = createClient();
+
+  // Avatar state
+  const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
+  const [displayName, setDisplayName] = React.useState<string>("User");
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+
+        const user = authData.user;
+        if (!user) return;
+
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("avatar_path, first_name, last_name")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) throw profileError;
+
+        const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
+        if (name) setDisplayName(name);
+
+        if (profile?.avatar_path) {
+          const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(profile.avatar_path);
+          setAvatarUrl(`${urlData.publicUrl}?v=${Date.now()}`); // cache bust
+        } else {
+          setAvatarUrl(null);
+        }
+      } catch (e: any) {
+        console.error(e);
+        toast.error(e?.message ?? "Failed to load avatar.");
+      }
+    })();
+  }, [supabase]);
+
   const navItems: NavItem[] = [
     { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { path: "/dashboard/attendance-table", label: "Attendance Table", icon: Table2 },
@@ -37,7 +73,6 @@ export default function SideBar() {
   ];
 
   const handleLogout = async () => {
-    const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/auth/login");
     router.refresh();
@@ -56,19 +91,11 @@ export default function SideBar() {
       <div className="px-5 py-6">
         <div className="flex items-center gap-3">
           <div className="relative h-40 w-100">
-            <Image
-              src={main_logo}
-              alt="TimeWISE"
-              fill
-              className="object-contain"
-              priority
-            />
+            <Image src={main_logo} alt="TimeWISE" fill className="object-contain" priority />
           </div>
         </div>
 
-        <p className="mt-3 text-xs text-black/50">
-          Your attendance one-stop shop
-        </p>
+        <p className="mt-3 text-xs text-black/50">Your attendance one-stop shop</p>
       </div>
 
       <Separator />
@@ -107,6 +134,21 @@ export default function SideBar() {
       <div className="px-3 pb-4">
         <Separator className="mb-3" />
 
+        {/* User info (static display) */}
+        <div className="flex items-center gap-3 px-3 py-3 rounded-xl">
+          <Avatar className="h-9 w-9 ring-1 ring-black/10">
+            <AvatarImage src={avatarUrl ?? undefined} alt="Profile avatar" />
+            <AvatarFallback className="text-xs">
+              {displayName?.[0]?.toUpperCase() ?? "U"}
+            </AvatarFallback>
+          </Avatar>
+
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-black truncate">{displayName}</p>
+            <p className="text-xs text-black/50 truncate">Employee</p>
+          </div>
+        </div>
+
         {/* Logout */}
         <Button
           type="button"
@@ -122,9 +164,7 @@ export default function SideBar() {
           Logout
         </Button>
 
-        <div className="mt-3 px-2 text-[11px] text-black/40">
-          v0.1 • Internal
-        </div>
+        <div className="mt-3 px-2 text-[11px] text-black/40">v0.1 • Internal</div>
       </div>
     </aside>
   );

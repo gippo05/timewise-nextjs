@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import UpdateProfile from "@/components/UpdateProfile";
 import UpdatePassword from "@/components/UpdatePassword";
+import AvatarUploaderCard from "@/components/UploadAvatar";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -27,23 +28,33 @@ export default async function SettingsPage() {
   return (
   <>
 
-  <div className="px-5 pb-10">
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-[400px_minmax(0,1fr)] items-stretch">
-  
-                <div className="min-w-0 h-full">
-                  <UpdateProfile userId={user.id} profile={profile}/> 
-                </div>
-                <div className="grid gap-8 min-w-0 items-stretch w-full
-                  grid-cols-[repeat(auto-fit,minmax(500px,1fr))]">
-                 <div className="min-w-0 h-full">
-                    <UpdatePassword user={user} />
-                  </div>
-                </div>
-  
-                
-  
-              </div>
-            </div>
+
+
+
+        <div className="px-5 pb-10">
+  <div className="grid grid-cols-1 gap-12 lg:grid-cols-[400px_minmax(0,1fr)] items-start">
+    {/* Left column */}
+    <div className="min-w-0">
+      <UpdateProfile userId={user.id} profile={profile} />
+    </div>
+
+    {/* Right column: Security + Avatar side-by-side */}
+    <div className="min-w-0 grid lg:grid-cols-[minmax(500px,1fr)_500px] items-start">
+  <div className="min-w-0">
+    <UpdatePassword user={user} />
+  </div>
+
+  <div className="min-w-0">
+    <AvatarUploaderCard userId={user.id} />
+  </div>
+</div>
+
+  </div>
+</div>
+
+
+
+
  
 
 
