@@ -17,6 +17,7 @@ type AttendanceRow = {
   second_break: string | null;
   end_second_break: string | null;
   clock_out: string | null;
+  late_minutes: number | null;
 };
 
 type ClockState = "clocked_out" | "working" | "on_break";
@@ -25,6 +26,17 @@ function formatTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
+
+function computeLateMinutes(clockInISO: string, startHour = 11, startMinute = 0) {
+  const clockIn = new Date(clockInISO);
+
+  const scheduledStart = new Date(clockIn);
+  scheduledStart.setHours(startHour, startMinute, 0, 0);
+
+  const diffMs = clockIn.getTime() - scheduledStart.getTime();
+  return diffMs > 0 ? Math.floor(diffMs / 60000) : 0;
+}
+
 
 export default function ClockCard() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -46,7 +58,7 @@ export default function ClockCard() {
   async function refreshActiveAttendance(uid: string): Promise<AttendanceRow | null> {
     const { data, error } = await supabase
       .from("attendance")
-      .select("id, clock_in, break, end_break, second_break, end_second_break, clock_out")
+      .select("id, clock_in, break, end_break, second_break, end_second_break, clock_out, late_minutes")
       .eq("user_id", uid)
       .is("clock_out", null)
       .order("created_at", { ascending: false })
@@ -103,29 +115,37 @@ export default function ClockCard() {
     return `Status: Working • clocked in ${active.clock_in ? formatTime(active.clock_in) : ""}`;
   }, [active, state]);
 
-  async function clockIn() {
-    if (!userId) return;
+ async function clockIn() {
+  if (!userId) return;
 
-    setIsActing(true);
-    try {
-      const timestamp = new Date().toISOString();
+  setIsActing(true);
+  try {
+    const timestamp = new Date().toISOString();
+    const lateMinutes = computeLateMinutes(timestamp, 11, 0);
 
-      const { data, error } = await supabase
-        .from("attendance")
-        .insert([{ clock_in: timestamp, user_id: userId }])
-        .select("id, clock_in, break, end_break, second_break, end_second_break, clock_out")
-        .single();
+    const { data, error } = await supabase
+      .from("attendance")
+      .insert([
+        {
+          clock_in: timestamp,
+          user_id: userId,
+          late_minutes: lateMinutes, // ✅ persisted
+        },
+      ])
+      .select("id, clock_in, break, end_break, second_break, end_second_break, clock_out, late_minutes")
+      .single();
 
-      if (error) {
-        console.error("Clock in error:", error);
-        return;
-      }
-
-      setActive((data ?? null) as AttendanceRow | null);
-    } finally {
-      setIsActing(false);
+    if (error) {
+      console.error("Clock in error:", error);
+      return;
     }
+
+    setActive((data ?? null) as AttendanceRow | null);
+  } finally {
+    setIsActing(false);
   }
+}
+
 
   async function startBreakAuto(uid: string) {
     const current = await refreshActiveAttendance(uid);
