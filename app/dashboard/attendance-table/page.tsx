@@ -1,5 +1,9 @@
+
+
 import AttendanceTable from "../../../components/attendanceTable";
-import { createClient } from "@/lib/supabase/server"; // <-- server client, not client
+import { createClient } from "@/lib/supabase/server";
+
+
 
 export default async function AttendanceTablePage() {
   const supabase = await createClient();
@@ -69,6 +73,8 @@ export default async function AttendanceTablePage() {
     .order("created_at", { ascending: false });
 
   if (error) console.error("Attendance fetch error:", error);
+
+  
 
   return <AttendanceTable attendance={attendance ?? []} />;
 }

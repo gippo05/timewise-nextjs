@@ -32,6 +32,7 @@ export default function SideBar() {
   // Avatar state
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
   const [displayName, setDisplayName] = React.useState<string>("User");
+  const [displayRole, setDisplayRole] = React.useState<string>(" ")
 
   React.useEffect(() => {
     (async () => {
@@ -44,7 +45,7 @@ export default function SideBar() {
 
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("avatar_path, first_name, last_name")
+          .select("avatar_path, first_name, last_name, role")
           .eq("id", user.id)
           .maybeSingle();
 
@@ -52,6 +53,9 @@ export default function SideBar() {
 
         const name = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
         if (name) setDisplayName(name);
+
+        const role = profile?.role || " ";
+        setDisplayRole(role);
 
         if (profile?.avatar_path) {
           const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(profile.avatar_path);
@@ -145,7 +149,7 @@ export default function SideBar() {
 
           <div className="min-w-0">
             <p className="text-sm font-semibold text-black truncate">{displayName}</p>
-            <p className="text-xs text-black/50 truncate">Employee</p>
+            <p className="text-xs text-black/50 truncate">{displayRole}</p>
           </div>
         </div>
 

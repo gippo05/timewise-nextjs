@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 type ProfileRow = {
   id: string;
   avatar_path: string | null;
-  full_name?: string | null;
+  first_name?: string | null;
 };
 
 type Props = {
@@ -166,13 +166,13 @@ export default function AvatarUploaderCard({ userId, fallbackName, preferredExt 
                 We keep AvatarImage for shadcn consistency. */}
             <AvatarImage src={avatarUrl ?? undefined} alt="Profile avatar" />
             <AvatarFallback className="text-sm">
-              {initials(profile?.full_name ?? fallbackName)}
+              {initials(profile?.first_name ?? fallbackName)}
             </AvatarFallback>
           </Avatar>
 
           <div className="min-w-0">
             <p className="text-sm font-medium leading-none">
-              {profile?.full_name || fallbackName || "User"}
+              {profile?.first_name || fallbackName || "User"}
             </p>
             <p className="text-xs text-muted-foreground mt-1 truncate">{userId}</p>
           </div>
