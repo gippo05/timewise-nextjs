@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function AttendanceTable({ attendance }) {
   const ITEMS_PER_PAGE = 10;
@@ -8,8 +8,9 @@ export default function AttendanceTable({ attendance }) {
   const [currentPage, setCurrentPage] = useState(1);
 
   // Date range state (YYYY-MM-DD)
-  const [fromDate, setFromDate] = useState(""); // e.g. "2026-01-01"
-  const [toDate, setToDate] = useState("");     // e.g. "2026-01-15"
+  const [fromDate, setFromDate] = useState(""); 
+  const [toDate, setToDate] = useState("");     
+  const [selectedUserId, setSelectedUserId] = useState("");
 
   function calculateWorkedHours(log) {
     if (!log.clock_in || !log.clock_out) return null;
@@ -54,26 +55,47 @@ export default function AttendanceTable({ attendance }) {
     return new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
   }
 
+  const employees = useMemo(() => {
+  const logs = attendance ?? [];
+  const map = new Map();
+
+  for (const log of logs) {
+    const id = log.user_id; // make sure this exists in your row
+    if (!id) continue;
+
+    const first = log.profiles?.first_name ?? "";
+    const last = log.profiles?.last_name ?? "";
+    const name = `${first} ${last}`.trim() || "Unnamed";
+
+    if (!map.has(id)) map.set(id, name);
+  }
+
+  return Array.from(map.entries())
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}, [attendance]);
+
+
   const filteredAttendance = useMemo(() => {
-    const logs = attendance ?? [];
+  const logs = attendance ?? [];
 
-    // No filter if either date missing
-    if (!fromDate || !toDate) return logs;
+  return logs.filter((log) => {
+    // employee filter
+    if (selectedUserId && log.user_id !== selectedUserId) return false;
 
-    const startMs = toStartOfDayMs(fromDate);
-    const endMs = toEndOfDayMs(toDate);
+    // date filter (only apply if both set)
+    if (!fromDate || !toDate) return true;
 
-    return logs.filter((log) => {
-      if (!log.created_at) return false;
-      const t = new Date(log.created_at).getTime();
-      return t >= startMs && t <= endMs;
-    });
-  }, [attendance, fromDate, toDate]);
+    const t = new Date(log.created_at).getTime();
+    return t >= toStartOfDayMs(fromDate) && t <= toEndOfDayMs(toDate);
+  });
+}, [attendance, fromDate, toDate, selectedUserId]);
+
 
   // Reset pagination when filter changes
-  useMemo(() => {
+  useEffect(() => {
     setCurrentPage(1);
-  }, [fromDate, toDate]);
+  }, [fromDate, toDate, selectedUserId]);
 
   const totalPages = Math.ceil((filteredAttendance.length || 0) / ITEMS_PER_PAGE);
 
@@ -91,9 +113,31 @@ export default function AttendanceTable({ attendance }) {
 
   return (
     <>
+  
+
+
       {/* Range filter UI */}
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col sm:flex-row sm:items-end gap-2">
+
+
+                {/* Name Filter UI */}
+          <div className="flex flex-col">
+              <label className="text-xs text-gray-600">Employee</label>
+              <select
+                value={selectedUserId}
+                onChange={(e) => setSelectedUserId(e.target.value)}
+                className="h-9 rounded-md border border-gray-200 px-3 text-sm bg-white"
+              >
+                <option value="">All employees</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
           <div className="flex flex-col">
             <label className="text-xs text-gray-600">From</label>
             <input
@@ -103,6 +147,8 @@ export default function AttendanceTable({ attendance }) {
               className="h-9 rounded-md border border-gray-200 px-3 text-sm"
             />
           </div>
+
+          
 
           <div className="flex flex-col">
             <label className="text-xs text-gray-600">To</label>
@@ -119,6 +165,7 @@ export default function AttendanceTable({ attendance }) {
             onClick={() => {
               setFromDate("");
               setToDate("");
+              setSelectedUserId("");
             }}
             className="h-9 rounded-md border px-3 text-sm text-gray-700 hover:bg-gray-100"
           >
