@@ -293,7 +293,7 @@ export default function ClockCard() {
                 {secondBreakUsed ? (
                   <Button
                     disabled
-                    className="flex-1 h-11 rounded-xl bg-black/40 text-white cursor-not-allowed"
+                    className="flex-1 h-11 rounded-xl bg-indigo-400 text-white cursor-not-allowed"
                   >
                     Breaks Used
                   </Button>
@@ -301,7 +301,7 @@ export default function ClockCard() {
                   <Button
                     onClick={handleStartBreak}
                     disabled={isLoading || isActing}
-                    className="flex-1 h-11 rounded-xl bg-black text-white hover:bg-black/90 disabled:opacity-50"
+                    className="flex-1 h-11 rounded-xl bg-indigo-400 text-white hover:bg-indigo-300 disabled:opacity-50"
                   >
                     Start Break
                   </Button>
@@ -324,7 +324,7 @@ export default function ClockCard() {
               <Button
                 onClick={handleEndBreak}
                 disabled={isLoading || isActing}
-                className="w-full h-11 rounded-xl bg-black text-white hover:bg-black/90 disabled:opacity-50"
+                className="w-full h-11 rounded-xl bg-indigo-400 text-white hover:bg-indigo-300 disabled:opacity-50"
               >
                 End Break
               </Button>
@@ -332,8 +332,7 @@ export default function ClockCard() {
               <Button
                 onClick={clockOut}
                 disabled={isLoading || isActing}
-                variant="outline"
-                className="w-full h-11 rounded-xl border-black/20"
+                className="w-full h-11 rounded-xl border-black/20 bg-indigo-400"
               >
                 Clock Out
               </Button>

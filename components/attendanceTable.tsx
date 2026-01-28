@@ -93,7 +93,7 @@ export default function AttendanceTable({ attendance }) {
     <>
       {/* Range filter UI */}
       <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-2">
           <div className="flex flex-col">
             <label className="text-xs text-gray-600">From</label>
             <input
