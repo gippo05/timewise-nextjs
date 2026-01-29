@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { computeLateMinutes } from "@/lib/attendance";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,17 +27,6 @@ function formatTime(iso: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
-
-function computeLateMinutes(clockInISO: string, startHour = 11, startMinute = 0) {
-  const clockIn = new Date(clockInISO);
-
-  const scheduledStart = new Date(clockIn);
-  scheduledStart.setHours(startHour, startMinute, 0, 0);
-
-  const diffMs = clockIn.getTime() - scheduledStart.getTime();
-  return diffMs > 0 ? Math.floor(diffMs / 60000) : 0;
-}
-
 
 export default function ClockCard() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -115,37 +105,63 @@ export default function ClockCard() {
     return `Status: Working • clocked in ${active.clock_in ? formatTime(active.clock_in) : ""}`;
   }, [active, state]);
 
- async function clockIn() {
-  if (!userId) return;
+  // ✅ Refactored clock in: fetch profile schedule fields -> compute late -> insert
+  async function clockIn() {
+    if (!userId) return;
 
-  setIsActing(true);
-  try {
-    const timestamp = new Date().toISOString();
-    const lateMinutes = computeLateMinutes(timestamp, 11, 0);
+    setIsActing(true);
+    try {
+      // prevent double clock-ins (optional safety)
+      const current = await refreshActiveAttendance(userId);
+      if (current?.clock_in && !current.clock_out) {
+        // already clocked in
+        return;
+      }
 
-    const { data, error } = await supabase
-      .from("attendance")
-      .insert([
-        {
-          clock_in: timestamp,
-          user_id: userId,
-          late_minutes: lateMinutes, // ✅ persisted
-        },
-      ])
-      .select("id, clock_in, break, end_break, second_break, end_second_break, clock_out, late_minutes")
-      .single();
+      const nowISO = new Date().toISOString();
 
-    if (error) {
-      console.error("Clock in error:", error);
-      return;
+      // 1) get expected_start_time + grace_minutes
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("expected_start_time, grace_minutes")
+        .eq("id", userId)
+        .single();
+
+      if (profileError) {
+        console.error("Failed to fetch profile schedule fields:", profileError);
+        return;
+      }
+
+      // 2) compute late minutes (null if expected_start_time is null)
+      const lateMinutes = computeLateMinutes({
+        clockInISO: nowISO,
+        expectedStartTime: profile?.expected_start_time ?? null,
+        graceMinutes: profile?.grace_minutes ?? 5,
+      });
+
+      // 3) insert attendance row
+      const { data, error } = await supabase
+        .from("attendance")
+        .insert([
+          {
+            clock_in: nowISO,
+            user_id: userId,
+            late_minutes: lateMinutes, // ✅ persisted
+          },
+        ])
+        .select("id, clock_in, break, end_break, second_break, end_second_break, clock_out, late_minutes")
+        .single();
+
+      if (error) {
+        console.error("Clock in error:", error);
+        return;
+      }
+
+      setActive((data ?? null) as AttendanceRow | null);
+    } finally {
+      setIsActing(false);
     }
-
-    setActive((data ?? null) as AttendanceRow | null);
-  } finally {
-    setIsActing(false);
   }
-}
-
 
   async function startBreakAuto(uid: string) {
     const current = await refreshActiveAttendance(uid);
@@ -227,7 +243,6 @@ export default function ClockCard() {
     }
   }
 
-  // Button handlers (wrap async and pass userId)
   async function handleStartBreak() {
     if (!userId) return;
 
@@ -256,9 +271,7 @@ export default function ClockCard() {
     }
   }
 
-  const secondBreakUsed =
-  !!active?.second_break && !!active?.end_second_break;
-
+  const secondBreakUsed = !!active?.second_break && !!active?.end_second_break;
 
   return (
     <Card className="w-full max-w-sm rounded-2xl border-black/10 shadow-sm h-full">
@@ -277,7 +290,6 @@ export default function ClockCard() {
             {isLoading ? "Loading status..." : statusLine}
           </p>
 
-          {/* Actions */}
           {state === "clocked_out" && (
             <Button
               onClick={clockIn}
@@ -288,36 +300,35 @@ export default function ClockCard() {
             </Button>
           )}
 
-            {state === "working" && (
-              <div className="flex gap-2">
-                {secondBreakUsed ? (
-                  <Button
-                    disabled
-                    className="flex-1 h-11 rounded-xl bg-indigo-400 text-white cursor-not-allowed"
-                  >
-                    Breaks Used
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleStartBreak}
-                    disabled={isLoading || isActing}
-                    className="flex-1 h-11 rounded-xl bg-indigo-400 text-white hover:bg-indigo-300 disabled:opacity-50"
-                  >
-                    Start Break
-                  </Button>
-                )}
-
+          {state === "working" && (
+            <div className="flex gap-2">
+              {secondBreakUsed ? (
                 <Button
-                  onClick={clockOut}
-                  disabled={isLoading || isActing}
-                  variant="outline"
-                  className="flex-1 h-11 rounded-xl border-black/20"
+                  disabled
+                  className="flex-1 h-11 rounded-xl bg-indigo-400 text-white cursor-not-allowed"
                 >
-                  Clock Out
+                  Breaks Used
                 </Button>
-              </div>
-            )}
+              ) : (
+                <Button
+                  onClick={handleStartBreak}
+                  disabled={isLoading || isActing}
+                  className="flex-1 h-11 rounded-xl bg-indigo-400 text-white hover:bg-indigo-300 disabled:opacity-50"
+                >
+                  Start Break
+                </Button>
+              )}
 
+              <Button
+                onClick={clockOut}
+                disabled={isLoading || isActing}
+                variant="outline"
+                className="flex-1 h-11 rounded-xl border-black/20"
+              >
+                Clock Out
+              </Button>
+            </div>
+          )}
 
           {state === "on_break" && (
             <div className="space-y-2">

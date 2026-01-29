@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type AttendanceRow = {
+  id?: string;
   created_at: string;
   clock_in: string | null;
   break: string | null;
@@ -11,7 +12,7 @@ type AttendanceRow = {
   second_break: string | null;
   end_second_break: string | null;
   clock_out: string | null;
-  late_minutes?: number | null; // ✅ new column
+  late_minutes?: number | null; // stored in DB at clock-in
 };
 
 function workedMinutes(log: AttendanceRow) {
@@ -36,19 +37,6 @@ function workedMinutes(log: AttendanceRow) {
   return Math.max(0, Math.floor(ms / 60000));
 }
 
-// Optional fallback for old rows that don't have late_minutes yet
-function computeLateMinutesFromClockIn(clockInISO: string | null) {
-  if (!clockInISO) return 0;
-
-  const clockIn = new Date(clockInISO);
-
-  const scheduledStart = new Date(clockIn);
-  scheduledStart.setHours(11, 0, 0, 0); // 11:00 AM
-
-  const diffMs = clockIn.getTime() - scheduledStart.getTime();
-  return diffMs > 0 ? Math.floor(diffMs / 60000) : 0;
-}
-
 export default function WorkedHoursCard({
   attendance,
   isLoading,
@@ -70,10 +58,10 @@ export default function WorkedHoursCard({
   }, [todaysLogs]);
 
   const lateMinsToday = useMemo(() => {
-    // If you have multiple rows/day (e.g., split shifts), summing is safest.
+    // Stored value only. If null/undefined, treat as "not applicable / not recorded yet"
+    // Summing supports multiple rows/day if you ever do that.
     return todaysLogs.reduce((sum, log) => {
-      const stored = log.late_minutes;
-      const late = typeof stored === "number" ? stored : computeLateMinutesFromClockIn(log.clock_in);
+      const late = typeof log.late_minutes === "number" ? log.late_minutes : 0;
       return sum + Math.max(0, late);
     }, 0);
   }, [todaysLogs]);
