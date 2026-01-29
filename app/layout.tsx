@@ -12,7 +12,10 @@ const inter = Inter({
 
 
 export const metadata: Metadata = {
-  title: "TimeWise Attendance Tracker"
+  title: "TimeWise Attendance Tracker",
+  icons: {
+    icon: "/icon.png",
+  },
 };
 
 export default function RootLayout({
