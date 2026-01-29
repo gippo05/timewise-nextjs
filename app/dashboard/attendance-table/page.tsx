@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 export default async function AttendanceTablePage() {
   const supabase = await createClient();
 
-  // 1) Get current user
+  
   const {
     data: { user },
     error: userError,
