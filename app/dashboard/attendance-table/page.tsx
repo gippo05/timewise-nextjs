@@ -1,9 +1,5 @@
-
-
-import AttendanceTable from "../../../components/attendanceTable";
+import AttendanceTable, { type AttendanceRow } from "../../../components/attendanceTable";
 import { createClient } from "@/lib/supabase/server";
-
-
 
 export default async function AttendanceTablePage() {
   const supabase = await createClient();
@@ -16,7 +12,6 @@ export default async function AttendanceTablePage() {
 
   if (userError) console.error(userError);
 
-  // Not logged in
   if (!user) {
     return (
       <div className="p-10">
@@ -41,15 +36,13 @@ export default async function AttendanceTablePage() {
     return (
       <div className="p-10">
         <h2 className="text-xl font-semibold">Access denied</h2>
-        <p className="text-black/60">
-          Sorry, you don’t have access to view this content.
-        </p>
+        <p className="text-black/60">Sorry, you don’t have access to view this content.</p>
       </div>
     );
   }
 
   // 4) Admin can fetch all attendance
-  const { data: attendance, error } = await supabase
+  const { data, error } = await supabase
     .from("attendance")
     .select(
       `
@@ -74,7 +67,8 @@ export default async function AttendanceTablePage() {
 
   if (error) console.error("Attendance fetch error:", error);
 
-  
+  // ✅ Explicitly type it to match the component prop
+  const attendance: AttendanceRow[] = (data ?? []) as AttendanceRow[];
 
-  return <AttendanceTable attendance={attendance ?? []} />;
+  return <AttendanceTable attendance={attendance} />;
 }
