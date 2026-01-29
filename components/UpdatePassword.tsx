@@ -1,29 +1,62 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "@radix-ui/react-label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 
-
-
-type UserLike = {
-  id: string;
-    email: string | null | undefined;
-};
-
-export default function UpdatePassword({ user }: { user: UserLike }) {
+export default function UpdatePassword({ userId }: { userId: string | null }) {
   const supabase = createClient();
   const router = useRouter();
+
+  const [email, setEmail] = useState<string | null>(null);
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isFetchingEmail, setIsFetchingEmail] = useState(true);
+
+  // Load user email (needed for signInWithPassword verification)
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        // If page already has userId but auth session is missing, no point continuing.
+        if (!userId) {
+          if (!cancelled) setEmail(null);
+          return;
+        }
+
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error("getUser error:", error);
+          if (!cancelled) setEmail(null);
+          return;
+        }
+
+        // Make sure the user matches the prop (optional safety)
+        if (data?.user?.id !== userId) {
+          if (!cancelled) setEmail(null);
+          return;
+        }
+
+        if (!cancelled) setEmail(data.user.email ?? null);
+      } finally {
+        if (!cancelled) setIsFetchingEmail(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, userId]);
 
   const mismatch = useMemo(() => {
     if (!newPassword || !confirmPassword) return false;
@@ -33,19 +66,22 @@ export default function UpdatePassword({ user }: { user: UserLike }) {
   const canSubmit = useMemo(() => {
     return (
       !isLoading &&
-      !!user.email &&
+      !isFetchingEmail &&
+      !!userId &&
+      !!email &&
       currentPassword.length > 0 &&
       newPassword.length >= 8 &&
       confirmPassword.length > 0 &&
       !mismatch
     );
-  }, [isLoading, user.email, currentPassword, newPassword, confirmPassword, mismatch]);
+  }, [isLoading, isFetchingEmail, userId, email, currentPassword, newPassword, confirmPassword, mismatch]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!userId) return;
 
-    if (!user.email) {
-      toast.error("No email found for this user.");
+    if (!email) {
+      toast.error("No email found for this account.");
       return;
     }
 
@@ -62,9 +98,9 @@ export default function UpdatePassword({ user }: { user: UserLike }) {
     setIsLoading(true);
 
     try {
-      // 1) verify current password (silent re-auth)
+      // 1) verify current password (re-auth)
       const { error: authError } = await supabase.auth.signInWithPassword({
-        email: user.email,
+        email,
         password: currentPassword,
       });
 
@@ -85,16 +121,15 @@ export default function UpdatePassword({ user }: { user: UserLike }) {
 
       toast.success("Password updated", { description: "Please log in again." });
 
-      // 3) recommended: sign out after password change
+      // 3) sign out after password change
       await supabase.auth.signOut();
 
-      // optional: redirect to login page if you have one
-      // router.push("/login");
-      router.push("/auth/login")
       // clear fields
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+
+      router.push("/auth/login");
     } finally {
       setIsLoading(false);
     }
@@ -110,55 +145,68 @@ export default function UpdatePassword({ user }: { user: UserLike }) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="current_password" className="text-sm text-black/80">
-              Current password
-            </Label>
-            <Input
-              id="current_password"
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-          </div>
+        {!userId ? (
+          <p className="text-sm text-black/60">You need to be logged in to change your password.</p>
+        ) : (
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current_password" className="text-sm text-black/80">
+                Current password
+              </Label>
+              <Input
+                id="current_password"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                autoComplete="current-password"
+                disabled={isLoading || isFetchingEmail}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="new_password" className="text-sm text-black/80">
-              New password
-            </Label>
-            <Input
-              id="new_password"
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-            <p className="text-xs text-black/50">At least 8 characters.</p>
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="new_password" className="text-sm text-black/80">
+                New password
+              </Label>
+              <Input
+                id="new_password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
+                disabled={isLoading || isFetchingEmail}
+              />
+              <p className="text-xs text-black/50">At least 8 characters.</p>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="confirm_password" className="text-sm text-black/80">
-              Confirm new password
-            </Label>
-            <Input
-              id="confirm_password"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              autoComplete="new-password"
-            />
+            <div className="space-y-2">
+              <Label htmlFor="confirm_password" className="text-sm text-black/80">
+                Confirm new password
+              </Label>
+              <Input
+                id="confirm_password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
+                disabled={isLoading || isFetchingEmail}
+              />
 
-            {mismatch && (
-              <p className="text-sm text-red-600">Passwords do not match.</p>
+              {mismatch && (
+                <p className="text-sm text-red-600">Passwords do not match.</p>
+              )}
+            </div>
+
+            <Button type="submit" disabled={!canSubmit} className="w-full h-11 rounded-xl">
+              {isLoading ? "Updating..." : "Update password"}
+            </Button>
+
+            {!isFetchingEmail && !email && (
+              <p className="text-xs text-red-600">
+                This account has no email (or your session is invalid). Please log in again.
+              </p>
             )}
-          </div>
-
-          <Button type="submit" disabled={!canSubmit} className="w-full h-11 rounded-xl">
-            {isLoading ? "Updating..." : "Update password"}
-          </Button>
-        </form>
+          </form>
+        )}
       </CardContent>
     </Card>
   );

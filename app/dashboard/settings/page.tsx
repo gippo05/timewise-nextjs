@@ -41,7 +41,7 @@ export default async function SettingsPage() {
     {/* Right column: Security + Avatar side-by-side */}
     <div className="min-w-0 grid lg:grid-cols-[minmax(500px,1fr)_500px] items-start">
   <div className="min-w-0">
-    <UpdatePassword user={user} />
+    <UpdatePassword userId={user?.id ?? null} />
   </div>
 
   <div className="min-w-0">
