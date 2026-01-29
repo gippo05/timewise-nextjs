@@ -1,10 +1,17 @@
-import AttendanceTable, { type AttendanceRow } from "@/components/attendanceTable";
+import AttendanceTable from "@/components/attendanceTable";
+import type { AttendanceRow } from "@/src/types/attendance";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AttendanceTablePage() {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // 1) Auth
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) console.error("Auth error:", userError);
 
   if (!user) {
     return (
@@ -14,11 +21,14 @@ export default async function AttendanceTablePage() {
     );
   }
 
-  const { data: profile } = await supabase
+  // 2) Role check
+  const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
+
+  if (profileError) console.error("Profile fetch error:", profileError);
 
   const role = profile?.role ?? "employee";
 
@@ -31,6 +41,7 @@ export default async function AttendanceTablePage() {
     );
   }
 
+  // 3) Attendance fetch + profile join
   const { data, error } = await supabase
     .from("attendance")
     .select(
@@ -57,18 +68,28 @@ export default async function AttendanceTablePage() {
 
   if (error) console.error("Attendance fetch error:", error);
 
+  // 4) Normalize shape to match AttendanceRow exactly
   const attendance: AttendanceRow[] = (data ?? []).map((row: any) => ({
-    id: row.id,
-    user_id: row.user_id,
-    created_at: row.created_at,
+    id: String(row.id),
+    user_id: String(row.user_id),
+    created_at: String(row.created_at),
+
     clock_in: row.clock_in ?? null,
     break: row.break ?? null,
     end_break: row.end_break ?? null,
     second_break: row.second_break ?? null,
     end_second_break: row.end_second_break ?? null,
     clock_out: row.clock_out ?? null,
-    late_minutes: row.late_minutes ?? null,
-    profiles: Array.isArray(row.profiles) ? row.profiles : row.profiles ? [row.profiles] : [],
+
+    late_minutes:
+      typeof row.late_minutes === "number" ? row.late_minutes : row.late_minutes ?? null,
+
+    // Supabase can return array | object | null depending on relationship inference
+    profiles: Array.isArray(row.profiles)
+      ? row.profiles
+      : row.profiles
+      ? [row.profiles]
+      : [],
   }));
 
   return (

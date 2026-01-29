@@ -1,26 +1,7 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
-
-export type AttendanceRow = {
-  id: string;
-  user_id: string;
-  created_at: string;
-  clock_in: string | null;
-  break: string | null;
-  end_break: string | null;
-  second_break: string | null;
-  end_second_break: string | null;
-  clock_out: string | null;
-  late_minutes: number | null;
-
-  profiles: {
-    id: string;
-    first_name: string | null;
-    last_name: string | null;
-    role: string | null;
-  }[];
-};
+import { useMemo, useState, useCallback } from "react";
+import type { AttendanceRow } from "../src/types/attendance";
 
 type AttendanceTableProps = {
   attendance: AttendanceRow[] | null | undefined;
@@ -122,7 +103,6 @@ export default function AttendanceTable({ attendance }: AttendanceTableProps) {
 
   const filteredAttendance = useMemo(() => {
     return logs.filter((log) => {
-      // employee filter
       if (selectedUserId && log.user_id !== selectedUserId) return false;
 
       // date filter (only apply if both set)
@@ -136,11 +116,6 @@ export default function AttendanceTable({ attendance }: AttendanceTableProps) {
 
   const totalPages = Math.max(1, Math.ceil(filteredAttendance.length / ITEMS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
-
-  // ✅ Sync currentPage if filters reduce totalPages
-  useEffect(() => {
-    if (safePage !== currentPage) setCurrentPage(safePage);
-  }, [safePage, currentPage]);
 
   const paginatedAttendance = useMemo(() => {
     const start = (safePage - 1) * ITEMS_PER_PAGE;
@@ -305,7 +280,7 @@ export default function AttendanceTable({ attendance }: AttendanceTableProps) {
 
           <div className="flex gap-2">
             <button
-              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              onClick={() => setCurrentPage(Math.max(safePage - 1, 1))}
               disabled={safePage === 1}
               className="px-3 py-1 rounded-md border text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
             >
@@ -313,7 +288,7 @@ export default function AttendanceTable({ attendance }: AttendanceTableProps) {
             </button>
 
             <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              onClick={() => setCurrentPage(Math.min(safePage + 1, totalPages))}
               disabled={safePage === totalPages}
               className="px-3 py-1 rounded-md border text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
             >
