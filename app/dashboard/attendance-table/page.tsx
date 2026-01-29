@@ -1,4 +1,4 @@
-import AttendanceTable, { type AttendanceRow } from "../../../components/attendanceTable";
+import AttendanceTable, { type AttendanceRow } from "@/components/attendanceTable";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function AttendanceTablePage() {
@@ -41,7 +41,7 @@ export default async function AttendanceTablePage() {
     );
   }
 
-  // 4) Admin can fetch all attendance
+  // 4) Admin fetch all attendance + joined profiles
   const { data, error } = await supabase
     .from("attendance")
     .select(
@@ -57,6 +57,7 @@ export default async function AttendanceTablePage() {
       clock_out,
       late_minutes,
       profiles (
+        id,
         first_name,
         last_name,
         role
@@ -67,8 +68,30 @@ export default async function AttendanceTablePage() {
 
   if (error) console.error("Attendance fetch error:", error);
 
-  // ✅ Explicitly type it to match the component prop
-  const attendance: AttendanceRow[] = (data ?? []) as AttendanceRow[];
+  // ✅ Normalize to match AttendanceRow EXACTLY (no lying casts)
+  const attendance: AttendanceRow[] = (data ?? []).map((row: any) => ({
+    id: row.id,
+    user_id: row.user_id,
+    created_at: row.created_at,
+    clock_in: row.clock_in ?? null,
+    break: row.break ?? null,
+    end_break: row.end_break ?? null,
+    second_break: row.second_break ?? null,
+    end_second_break: row.end_second_break ?? null,
+    clock_out: row.clock_out ?? null,
+    late_minutes: row.late_minutes ?? null,
 
-  return <AttendanceTable attendance={attendance} />;
+    // profiles sometimes comes as array, object, or null depending on relationship inference
+    profiles: Array.isArray(row.profiles)
+      ? row.profiles
+      : row.profiles
+      ? [row.profiles]
+      : [],
+  }));
+
+  return (
+    <div className="w-full p-5">
+      <AttendanceTable attendance={attendance} />
+    </div>
+  );
 }

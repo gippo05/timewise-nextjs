@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 
 export type AttendanceRow = {
   id: string;
@@ -15,6 +15,7 @@ export type AttendanceRow = {
   late_minutes: number | null;
 
   profiles: {
+    id: string;
     first_name: string | null;
     last_name: string | null;
     role: string | null;
@@ -136,6 +137,11 @@ export default function AttendanceTable({ attendance }: AttendanceTableProps) {
   const totalPages = Math.max(1, Math.ceil(filteredAttendance.length / ITEMS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
 
+  // ✅ Sync currentPage if filters reduce totalPages
+  useEffect(() => {
+    if (safePage !== currentPage) setCurrentPage(safePage);
+  }, [safePage, currentPage]);
+
   const paginatedAttendance = useMemo(() => {
     const start = (safePage - 1) * ITEMS_PER_PAGE;
     return filteredAttendance.slice(start, start + ITEMS_PER_PAGE);
@@ -226,7 +232,7 @@ export default function AttendanceTable({ attendance }: AttendanceTableProps) {
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white h-85">
+      <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white">
         <table className="min-w-full border-collapse">
           <thead className="bg-gray-100 sticky top-0">
             <tr className="text-left text-sm font-semibold text-gray-700">
@@ -239,7 +245,7 @@ export default function AttendanceTable({ attendance }: AttendanceTableProps) {
               <th className="px-4 py-3">End Second Break</th>
               <th className="px-4 py-3">Logout</th>
               <th className="px-4 py-3">Total Hours</th>
-              <th className="px-4 py-3">Late Minutes</th>
+              <th className="px-4 py-3 text-center">Late Minutes</th>
             </tr>
           </thead>
 
