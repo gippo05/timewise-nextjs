@@ -1,4 +1,8 @@
 // app/dashboard/page.tsx (SERVER)
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 import { createClient } from "@/lib/supabase/server";
 import DashboardClient from "@/components/DashboardClient";
 import type { AttendanceRow } from "@/src/types/attendance";
