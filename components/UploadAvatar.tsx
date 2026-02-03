@@ -153,7 +153,7 @@ export default function AvatarUploaderCard({ userId, fallbackName, preferredExt 
   }
 
   return (
-    <Card className="rounded-2xl border-black/10 shadow-sm">
+    <Card className="w-full rounded-2xl border-black/10 shadow-sm">
       <CardHeader className="space-y-1">
         <CardTitle className="text-base sm:text-lg font-semibold tracking-tight">Profile Avatar</CardTitle>
         <CardDescription>Upload a square image for best results. Max 2MB.</CardDescription>

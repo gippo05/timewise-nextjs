@@ -6,7 +6,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       {/* remove mx-auto so it doesn't center */}
       <div className="w-full px-6 py-10">
         {/* optional: give it a readable width but keep it left-aligned */}
-        <div className="max-w-3xl">
+        <div className="max-w-7xl">
           {children}
         </div>
       </div>

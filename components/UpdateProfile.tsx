@@ -63,7 +63,7 @@ export default function UpdateProfile({
   };
 
   return (
-    <Card className="w-full max-w-md rounded-2xl border-black/10 shadow-sm">
+    <Card className="w-full rounded-2xl border-black/10 shadow-sm">
       <CardHeader className="space-y-1">
         <CardTitle className="text-xl font-semibold tracking-tight">Profile</CardTitle>
         <CardDescription className="text-sm text-black/60">

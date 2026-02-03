@@ -6,7 +6,11 @@ import AvatarUploaderCard from "@/components/UploadAvatar";
 export default async function SettingsPage() {
   const supabase = await createClient();
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
   if (userError) console.error(userError);
 
   if (!user) {
@@ -26,38 +30,35 @@ export default async function SettingsPage() {
   if (profileError) console.error(profileError);
 
   return (
-  <>
-
-
-
-
-        <div className="px-5 pb-10">
-  <div className="grid grid-cols-1 gap-12 lg:grid-cols-[400px_minmax(0,1fr)] items-start">
-    {/* Left column */}
-    <div className="min-w-0">
-      <UpdateProfile userId={user.id} profile={profile} />
+  <div className="px-5 pb-10 w-full">
+    {/* Header */}
+    <div className="mb-8">
+      <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-black">
+        Settings
+      </h1>
+      <p className="mt-2 text-sm sm:text-base text-black/60">
+        Manage your profile, security, and account preferences.
+      </p>
     </div>
 
-    {/* Right column: Security + Avatar side-by-side */}
-    <div className="min-w-0 grid lg:grid-cols-[minmax(500px,1fr)_500px] items-start">
-  <div className="min-w-0">
-    <UpdatePassword userId={user?.id ?? null} />
+    {/* Layout */}
+    <div className="grid grid-cols-1 gap-6 w-full">
+      {/* Avatar full width */}
+      <div className="w-full min-w-0">
+        <AvatarUploaderCard userId={user.id} />
+      </div>
+
+      {/* Profile + Password full row */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch w-full">
+        <div className="w-full min-w-0 h-full">
+          <UpdateProfile userId={user.id} profile={profile} />
+        </div>
+
+        <div className="w-full min-w-0 h-full">
+          <UpdatePassword userId={user.id} />
+        </div>
+      </div>
+    </div>
   </div>
-
-  <div className="min-w-0">
-    <AvatarUploaderCard userId={user.id} />
-  </div>
-</div>
-
-  </div>
-</div>
-
-
-
-
- 
-
-
-</>
-)
+  );
 }
