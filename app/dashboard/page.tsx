@@ -51,7 +51,28 @@ export default async function DashboardPage() {
   const first_name = profileRes.data?.first_name ?? "";
   const last_name = profileRes.data?.last_name ?? "";
 
-  const attendance = (attendanceRes.data ?? []) as unknown as AttendanceRow[];
+  const attendance: AttendanceRow[] = (attendanceRes.data ?? []).map((row: any) => ({
+  id: String(row.id),
+  user_id: String(row.user_id),
+  created_at: String(row.created_at),
+
+  clock_in: row.clock_in ?? null,
+  break: row.break ?? null,
+  end_break: row.end_break ?? null,
+  second_break: row.second_break ?? null,
+  end_second_break: row.end_second_break ?? null,
+  clock_out: row.clock_out ?? null,
+
+  late_minutes:
+    typeof row.late_minutes === "number" ? row.late_minutes : row.late_minutes ?? null,
+
+  profiles: Array.isArray(row.profiles)
+    ? row.profiles
+    : row.profiles
+    ? [row.profiles]
+    : [],
+}));
+
 
   return (
     <DashboardClient
