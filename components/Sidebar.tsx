@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
-import { LayoutDashboard, Table2, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Table2, Settings, LogOut, Calendar1 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import main_logo from "@/public/TimeWISE logo.png";
 
@@ -78,7 +78,9 @@ export default function SideBar() {
   const navItems: NavItem[] = [
     { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { path: "/dashboard/attendance-table", label: "Attendance Table", icon: Table2 },
+    { path: "/dashboard/request-leave", label: "Request Leave", icon: Calendar1},
     { path: "/dashboard/settings", label: "Settings", icon: Settings },
+    
   ];
 
   const handleLogout = async () => {
