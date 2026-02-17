@@ -74,6 +74,7 @@ export default async function DashboardPage() {
 }));
 
 
+
   return (
     <DashboardClient
       first_name={first_name}
@@ -82,3 +83,6 @@ export default async function DashboardPage() {
     />
   );
 }
+
+
+
