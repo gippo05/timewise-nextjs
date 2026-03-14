@@ -14,7 +14,9 @@ const TopBar: React.FC = () => {
   const SidebarMenu: MenuItem[] = [
     { id: 1, title: "Dashboard", link: "/dashboard" },
     { id: 2, title: "Attendance Table", link: "/dashboard/attendance-table" },
-    { id: 3, title: "Settings", link: "/dashboard/settings" },
+    { id: 3, title: "Request Leave", link: "/dashboard/request-leave" },
+    { id: 4, title: "Leave Approvals", link: "/dashboard/request-leave/admin" },
+    { id: 5, title: "Settings", link: "/dashboard/settings" },
   ];
 
   const currentItem = SidebarMenu.find((item) => item.link === pathname);

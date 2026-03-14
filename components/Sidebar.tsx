@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 
-import { LayoutDashboard, Table2, Settings, LogOut, Calendar1 } from "lucide-react";
+import { LayoutDashboard, Table2, Settings, LogOut, Calendar1, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import main_logo from "@/public/TimeWISE logo.png";
 
@@ -64,9 +64,10 @@ export default function SideBar() {
         } else {
           setAvatarUrl(null);
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         console.error(e);
-        toast.error(e?.message ?? "Failed to load profile.");
+        const message = e instanceof Error ? e.message : "Failed to load profile.";
+        toast.error(message);
       }
     })();
 
@@ -75,13 +76,20 @@ export default function SideBar() {
     };
   }, [supabase]);
 
-  const navItems: NavItem[] = [
-    { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/dashboard/attendance-table", label: "Attendance Table", icon: Table2 },
-    { path: "/dashboard/request-leave", label: "Request Leave", icon: Calendar1},
-    { path: "/dashboard/settings", label: "Settings", icon: Settings },
-    
-  ];
+  const navItems = React.useMemo<NavItem[]>(() => {
+    const items: NavItem[] = [
+      { path: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+      { path: "/dashboard/attendance-table", label: "Attendance Table", icon: Table2 },
+      { path: "/dashboard/request-leave", label: "Request Leave", icon: Calendar1 },
+    ];
+
+    if ((displayRole ?? "").toLowerCase() === "admin") {
+      items.push({ path: "/dashboard/request-leave/admin", label: "Leave Approvals", icon: ClipboardCheck });
+    }
+
+    items.push({ path: "/dashboard/settings", label: "Settings", icon: Settings });
+    return items;
+  }, [displayRole]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
