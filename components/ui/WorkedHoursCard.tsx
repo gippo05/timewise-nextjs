@@ -1,6 +1,9 @@
 "use client";
 
 import { useMemo } from "react";
+import { CircleAlert, CircleCheckBig, Clock3 } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type AttendanceRow = {
@@ -12,7 +15,7 @@ type AttendanceRow = {
   second_break: string | null;
   end_second_break: string | null;
   clock_out: string | null;
-  late_minutes?: number | null; // stored in DB at clock-in
+  late_minutes?: number | null;
 };
 
 function workedMinutes(log: AttendanceRow) {
@@ -58,45 +61,81 @@ export default function WorkedHoursCard({
   }, [todaysLogs]);
 
   const lateMinsToday = useMemo(() => {
-    // Stored value only. If null/undefined, treat as "not applicable / not recorded yet"
-    // Summing supports multiple rows/day if you ever do that.
     return todaysLogs.reduce((sum, log) => {
       const late = typeof log.late_minutes === "number" ? log.late_minutes : 0;
       return sum + Math.max(0, late);
     }, 0);
   }, [todaysLogs]);
 
+  const completedToday = useMemo(
+    () => todaysLogs.filter((log) => Boolean(log.clock_out)).length,
+    [todaysLogs]
+  );
+
   const hrs = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
-
   const isLate = lateMinsToday > 0;
 
   return (
-    <Card className="w-full rounded-2xl border-black/10 shadow-sm h-full">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm sm:text-base font-medium tracking-tight text-black text-center">
-          Today’s Attendance
-        </CardTitle>
+    <Card className="h-full">
+      <CardHeader className="flex flex-row items-start justify-between gap-4 pb-2">
+        <div className="space-y-1">
+          <CardTitle className="text-lg">Today&apos;s attendance</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Worked hours and punctuality based on today&apos;s records.
+          </p>
+        </div>
+
+        <div className="flex size-10 items-center justify-center rounded-2xl border border-border bg-secondary text-foreground">
+          <Clock3 className="size-4" />
+        </div>
       </CardHeader>
 
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-4">
         {isLoading ? (
-          <p className="text-sm text-black/50 text-center">Loading...</p>
+          <p className="text-sm text-muted-foreground">
+            Loading today&apos;s summary...
+          </p>
         ) : (
           <>
-            <p className="text-2xl font-semibold text-black text-center">
-              {hrs}h {mins}m
-            </p>
+            <div className="rounded-[24px] border border-border bg-secondary/50 px-4 py-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Worked time
+              </p>
+              <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">
+                {hrs}h {mins}m
+              </p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {completedToday > 0
+                  ? `${completedToday} completed shift${completedToday === 1 ? "" : "s"} today`
+                  : "No completed shifts yet today"}
+              </p>
+            </div>
 
-            <p
-              className={`text-sm text-center font-medium ${
-                isLate ? "text-red-600" : "text-emerald-600"
-              }`}
-            >
-              {isLate ? `Late by ${lateMinsToday} mins` : "On time"}
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={isLate ? "warning" : "success"}>
+                {isLate ? `Late by ${lateMinsToday} min` : "On time"}
+              </Badge>
+              <Badge variant="secondary">
+                {todaysLogs.length} attendance entr
+                {todaysLogs.length === 1 ? "y" : "ies"}
+              </Badge>
+            </div>
 
-            <p className="text-xs text-black/50 text-center">Today</p>
+            <div className="rounded-2xl border border-border bg-white px-4 py-3 text-sm text-muted-foreground">
+              <div className="flex items-start gap-3">
+                {isLate ? (
+                  <CircleAlert className="mt-0.5 size-4 text-amber-600" />
+                ) : (
+                  <CircleCheckBig className="mt-0.5 size-4 text-emerald-600" />
+                )}
+                <p className="leading-relaxed">
+                  {isLate
+                    ? "Late minutes were recorded today. Use your recent attendance list below to inspect the details."
+                    : "Today&apos;s records look healthy so far. Your recent logs stay visible below for quick double-checks."}
+                </p>
+              </div>
+            </div>
           </>
         )}
       </CardContent>

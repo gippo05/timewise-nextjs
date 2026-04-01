@@ -1,27 +1,27 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
+import { RefreshCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { createClient } from "@/lib/supabase/client";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 type ProfileRow = {
   id: string;
   avatar_path: string | null;
-  first_name?: string | null;
+  first_name: string | null;
+  last_name: string | null;
 };
 
 type Props = {
-  userId: string; // supabase auth uid
-  // Optional: for nicer fallback letters
-  fallbackName?: string; // e.g. "Gipps"
-  // Optional: force file extension
+  userId: string;
+  fallbackName?: string;
   preferredExt?: "png" | "jpg" | "jpeg" | "webp";
 };
 
@@ -33,22 +33,33 @@ function initials(name?: string) {
   return (a + b).toUpperCase();
 }
 
-export default function AvatarUploaderCard({ userId, fallbackName, preferredExt = "png" }: Props) {
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Something went wrong.";
+}
+
+export default function AvatarUploaderCard({
+  userId,
+  fallbackName,
+  preferredExt = "png",
+}: Props) {
   const supabase = createClient();
 
   const [profile, setProfile] = React.useState<ProfileRow | null>(null);
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
-
   const [uploading, setUploading] = React.useState(false);
   const [removing, setRemoving] = React.useState(false);
   const [fileInputKey, setFileInputKey] = React.useState(0);
 
   const canRemove = Boolean(profile?.avatar_path);
+  const displayName =
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() ||
+    fallbackName ||
+    "Team member";
 
   const loadProfile = React.useCallback(async () => {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, avatar_path")
+      .select("id, avatar_path, first_name, last_name")
       .eq("id", userId)
       .maybeSingle();
 
@@ -58,12 +69,18 @@ export default function AvatarUploaderCard({ userId, fallbackName, preferredExt 
       return;
     }
 
-    const row = (data as ProfileRow | null) ?? { id: userId, avatar_path: null, full_name: null };
+    const row = (data as ProfileRow | null) ?? {
+      id: userId,
+      avatar_path: null,
+      first_name: null,
+      last_name: null,
+    };
     setProfile(row);
 
     if (row.avatar_path) {
-      const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(row.avatar_path);
-      // cache-bust to show freshly uploaded file even if CDN caches it
+      const { data: urlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(row.avatar_path);
       setAvatarUrl(`${urlData.publicUrl}?v=${Date.now()}`);
     } else {
       setAvatarUrl(null);
@@ -75,7 +92,6 @@ export default function AvatarUploaderCard({ userId, fallbackName, preferredExt 
   }, [loadProfile]);
 
   async function handleUpload(file: File) {
-    // Guardrails: because users will try uploading the entire internet.
     if (!file.type.startsWith("image/")) {
       toast.error("Please upload an image file.");
       return;
@@ -90,24 +106,23 @@ export default function AvatarUploaderCard({ userId, fallbackName, preferredExt 
       const extFromName = file.name.split(".").pop()?.toLowerCase();
       const ext =
         preferredExt ||
-        (extFromName === "png" || extFromName === "jpg" || extFromName === "jpeg" || extFromName === "webp"
-          ? (extFromName as any)
+        (extFromName === "png" ||
+        extFromName === "jpg" ||
+        extFromName === "jpeg" ||
+        extFromName === "webp"
+          ? extFromName
           : "png");
 
-      // IMPORTANT: matches your storage policy (foldername == userId)
       const path = `${userId}/avatar.${ext}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(path, file, {
-          upsert: true, // requires UPDATE policy too
-          contentType: file.type,
-          cacheControl: "3600",
-        });
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, {
+        upsert: true,
+        contentType: file.type,
+        cacheControl: "3600",
+      });
 
       if (uploadError) throw uploadError;
 
-      // Save the path in profiles
       const { error: upsertError } = await supabase
         .from("profiles")
         .upsert({ id: userId, avatar_path: path }, { onConflict: "id" });
@@ -116,10 +131,10 @@ export default function AvatarUploaderCard({ userId, fallbackName, preferredExt 
 
       toast.success("Avatar updated.");
       await loadProfile();
-      setFileInputKey((k) => k + 1); // reset input so same file can be picked again
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.message ?? "Upload failed.");
+      setFileInputKey((key) => key + 1);
+    } catch (error: unknown) {
+      console.error(error);
+      toast.error(getErrorMessage(error) || "Upload failed.");
     } finally {
       setUploading(false);
     }
@@ -130,11 +145,11 @@ export default function AvatarUploaderCard({ userId, fallbackName, preferredExt 
 
     setRemoving(true);
     try {
-      // Delete from storage
-      const { error: removeError } = await supabase.storage.from("avatars").remove([profile.avatar_path]);
+      const { error: removeError } = await supabase.storage
+        .from("avatars")
+        .remove([profile.avatar_path]);
       if (removeError) throw removeError;
 
-      // Clear from profile
       const { error: updateError } = await supabase
         .from("profiles")
         .update({ avatar_path: null })
@@ -144,42 +159,44 @@ export default function AvatarUploaderCard({ userId, fallbackName, preferredExt 
 
       toast.success("Avatar removed.");
       await loadProfile();
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err?.message ?? "Failed to remove avatar.");
+    } catch (error: unknown) {
+      console.error(error);
+      toast.error(getErrorMessage(error) || "Failed to remove avatar.");
     } finally {
       setRemoving(false);
     }
   }
 
   return (
-    <Card className="w-full rounded-2xl border-black/10 shadow-sm">
+    <Card className="h-full">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-base sm:text-lg font-semibold tracking-tight">Profile Avatar</CardTitle>
-        <CardDescription>Upload a square image for best results. Max 2MB.</CardDescription>
+        <CardTitle className="text-xl">Profile avatar</CardTitle>
+        <CardDescription>
+          Upload a square image for the cleanest result. Maximum file size: 2MB.
+        </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16 ring-1 ring-black/10">
-            {/* AvatarImage is fine, but Next/Image handles caching better.
-                We keep AvatarImage for shadcn consistency. */}
-            <AvatarImage src={avatarUrl ?? undefined} alt="Profile avatar" />
-            <AvatarFallback className="text-sm">
-              {initials(profile?.first_name ?? fallbackName)}
-            </AvatarFallback>
-          </Avatar>
+      <CardContent className="space-y-5">
+        <div className="rounded-[24px] border border-border bg-secondary/40 px-4 py-5">
+          <div className="flex items-center gap-4">
+            <Avatar className="size-20 border border-border bg-white">
+              <AvatarImage src={avatarUrl ?? undefined} alt="Profile avatar" />
+              <AvatarFallback className="text-lg font-semibold text-foreground">
+                {initials(displayName)}
+              </AvatarFallback>
+            </Avatar>
 
-          <div className="min-w-0">
-            <p className="text-sm font-medium leading-none">
-              {profile?.first_name || fallbackName || "User"}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1 truncate">{userId}</p>
+            <div className="min-w-0 space-y-1">
+              <p className="truncate text-lg font-semibold tracking-tight text-foreground">
+                {displayName}
+              </p>
+              <p className="truncate text-sm text-muted-foreground">{userId}</p>
+            </div>
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="avatar">Upload new avatar</Label>
+          <Label htmlFor="avatar">Upload a new avatar</Label>
           <Input
             key={fileInputKey}
             id="avatar"
@@ -191,29 +208,30 @@ export default function AvatarUploaderCard({ userId, fallbackName, preferredExt 
               if (file) void handleUpload(file);
             }}
           />
-          <p className="text-xs text-muted-foreground">
-            Tip: If your new avatar doesn’t show immediately, that’s caching. The code already cache-busts, so it
-            should behave.
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Refresh is available if you want to verify the latest file state after an upload.
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           <Button
+            type="button"
             variant="outline"
-            disabled={!canRemove || uploading || removing}
-            onClick={() => void handleRemove()}
-            className="rounded-xl"
+            disabled={uploading || removing}
+            onClick={() => void loadProfile()}
           >
-            {removing ? "Removing..." : "Remove avatar"}
+            <RefreshCcw className="size-4" />
+            Refresh
           </Button>
 
           <Button
-            variant="secondary"
-            disabled={uploading || removing}
-            onClick={() => void loadProfile()}
-            className="rounded-xl"
+            type="button"
+            variant="outline"
+            disabled={!canRemove || uploading || removing}
+            onClick={() => void handleRemove()}
           >
-            Refresh
+            <Trash2 className="size-4" />
+            {removing ? "Removing..." : "Remove"}
           </Button>
         </div>
       </CardContent>

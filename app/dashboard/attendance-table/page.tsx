@@ -1,47 +1,68 @@
+import { LockKeyhole, UserRoundX } from "lucide-react";
+
 import AttendanceTable from "@/components/attendanceTable";
-import type { AttendanceRow } from "@/src/types/attendance";
+import EmptyState from "@/components/empty-state";
 import { createClient } from "@/lib/supabase/server";
+import type { AttendanceRow } from "@/src/types/attendance";
+
+type AttendanceQueryRow = {
+  id: string;
+  user_id: string;
+  created_at: string;
+  clock_in: string | null;
+  break: string | null;
+  end_break: string | null;
+  second_break: string | null;
+  end_second_break: string | null;
+  clock_out: string | null;
+  late_minutes: number | null;
+  profiles: AttendanceRow["profiles"] | AttendanceRow["profiles"][number] | null;
+};
 
 export default async function AttendanceTablePage() {
   const supabase = await createClient();
 
-  // 1) Auth
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError) console.error("Auth error:", userError);
+  if (userError) {
+    console.error("Auth error:", userError);
+  }
 
   if (!user) {
     return (
-      <div className="p-10">
-        <h2 className="text-xl font-semibold">Please log in</h2>
-      </div>
+      <EmptyState
+        title="Sign in required"
+        description="You need an active account session before team attendance logs can be reviewed."
+        icon={UserRoundX}
+      />
     );
   }
 
-  // 2) Role check
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
 
-  if (profileError) console.error("Profile fetch error:", profileError);
+  if (profileError) {
+    console.error("Profile fetch error:", profileError);
+  }
 
   const role = profile?.role ?? "employee";
 
   if (role !== "admin") {
     return (
-      <div className="p-10">
-        <h2 className="text-xl font-semibold">Access denied</h2>
-        <p className="text-black/60">Sorry, you don’t have access to view this content.</p>
-      </div>
+      <EmptyState
+        title="Access restricted"
+        description="Attendance logs are currently reserved for admin users so workforce records stay properly controlled."
+        icon={LockKeyhole}
+      />
     );
   }
 
-  // 3) Attendance fetch + profile join
   const { data, error } = await supabase
     .from("attendance")
     .select(
@@ -66,35 +87,40 @@ export default async function AttendanceTablePage() {
     )
     .order("created_at", { ascending: false });
 
-  if (error) console.error("Attendance fetch error:", error);
+  if (error) {
+    console.error("Attendance fetch error:", error);
+  }
 
-  // 4) Normalize shape to match AttendanceRow exactly
-  const attendance: AttendanceRow[] = (data ?? []).map((row: any) => ({
+  const attendanceRows = (data ?? []) as unknown as AttendanceQueryRow[];
+
+  const attendance: AttendanceRow[] = attendanceRows.map((row) => ({
     id: String(row.id),
     user_id: String(row.user_id),
     created_at: String(row.created_at),
-
     clock_in: row.clock_in ?? null,
     break: row.break ?? null,
     end_break: row.end_break ?? null,
     second_break: row.second_break ?? null,
     end_second_break: row.end_second_break ?? null,
     clock_out: row.clock_out ?? null,
-
     late_minutes:
-      typeof row.late_minutes === "number" ? row.late_minutes : row.late_minutes ?? null,
-
-    // Supabase can return array | object | null depending on relationship inference
+      typeof row.late_minutes === "number"
+        ? row.late_minutes
+        : row.late_minutes ?? null,
     profiles: Array.isArray(row.profiles)
       ? row.profiles
       : row.profiles
-      ? [row.profiles]
-      : [],
+        ? [row.profiles]
+        : [],
   }));
 
   return (
-    <div className="w-full p-5">
-      <AttendanceTable attendance={attendance} />
-    </div>
+    <AttendanceTable
+      attendance={attendance}
+      title="Attendance logs"
+      description="Review team clock-ins, breaks, and total worked hours with filters designed for fast operational checks."
+      showEmployeeFilter
+      pageSize={10}
+    />
   );
 }

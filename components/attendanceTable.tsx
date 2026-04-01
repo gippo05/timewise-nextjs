@@ -1,10 +1,35 @@
 "use client";
 
-import { useMemo, useState, useCallback } from "react";
-import type { AttendanceRow } from "../src/types/attendance";
+import { useMemo, useState } from "react";
+import { format } from "date-fns";
+import { CalendarIcon } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { AttendanceRow } from "@/src/types/attendance";
 
 type AttendanceTableProps = {
   attendance: AttendanceRow[] | null | undefined;
+  title?: string;
+  description?: string;
+  showEmployeeFilter?: boolean;
+  pageSize?: number;
 };
 
 type EmployeeOption = { id: string; name: string };
@@ -19,14 +44,30 @@ function toEndOfDayMs(yyyyMmDd: string): number {
   return new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
 }
 
+function fromDateInputValue(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
+
+function toDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatFilterDate(value: string) {
+  return format(fromDateInputValue(value), "MMM d, yyyy");
+}
+
 function formatWorkedHours(hoursDecimal: number | null): string {
-  if (hoursDecimal === null) return "—";
+  if (hoursDecimal === null) return "--";
 
   const totalMinutes = Math.round(hoursDecimal * 60);
   const hrs = Math.floor(totalMinutes / 60);
   const mins = totalMinutes % 60;
 
-  return `${hrs}hr${hrs !== 1 ? "s" : ""} ${mins}min${mins !== 1 ? "s" : ""}`;
+  return `${hrs}h ${mins}m`;
 }
 
 function calculateWorkedHours(log: AttendanceRow): number | null {
@@ -43,7 +84,8 @@ function calculateWorkedHours(log: AttendanceRow): number | null {
 
   if (log.second_break && log.end_second_break) {
     breakDuration +=
-      new Date(log.end_second_break).getTime() - new Date(log.second_break).getTime();
+      new Date(log.end_second_break).getTime() -
+      new Date(log.second_break).getTime();
   }
 
   const workedMs = clockOut - clockIn - breakDuration;
@@ -57,14 +99,19 @@ function getProfile(log: AttendanceRow) {
 }
 
 function getFullName(log: AttendanceRow) {
-  const p = getProfile(log);
-  const first = p?.first_name ?? "";
-  const last = p?.last_name ?? "";
+  const profile = getProfile(log);
+  const first = profile?.first_name ?? "";
+  const last = profile?.last_name ?? "";
   return `${first} ${last}`.trim() || "Unnamed";
 }
 
+function formatRowDate(value: string | null) {
+  if (!value) return "--";
+  return format(new Date(value), "MMM d, yyyy");
+}
+
 function formatTime(value: string | null) {
-  if (!value) return "—";
+  if (!value) return "--";
   return new Date(value).toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -72,28 +119,77 @@ function formatTime(value: string | null) {
   });
 }
 
-export default function AttendanceTable({ attendance }: AttendanceTableProps) {
-  const ITEMS_PER_PAGE = 10;
+type SingleDateFilterPickerProps = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+};
 
+function SingleDateFilterPicker({
+  label,
+  value,
+  onChange,
+}: SingleDateFilterPickerProps) {
+  const [open, setOpen] = useState(false);
+  const selectedDate = value ? fromDateInputValue(value) : undefined;
+
+  return (
+    <div className="flex min-w-[180px] flex-col gap-1.5">
+      <label className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        {label}
+      </label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            className="justify-between rounded-xl px-3.5 text-left font-medium"
+          >
+            <span className={value ? "text-foreground" : "text-muted-foreground"}>
+              {value ? formatFilterDate(value) : "Select date"}
+            </span>
+            <CalendarIcon className="size-4 text-muted-foreground" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" sideOffset={10} className="w-auto p-0">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(date) => {
+              if (!date) return;
+              onChange(toDateInputValue(date));
+              setOpen(false);
+            }}
+            defaultMonth={selectedDate ?? new Date()}
+            fixedWeeks
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
+export default function AttendanceTable({
+  attendance,
+  title = "Attendance records",
+  description = "Review time logs, breaks, late minutes, and total worked hours in one clean table.",
+  showEmployeeFilter,
+  pageSize = 10,
+}: AttendanceTableProps) {
   const [currentPage, setCurrentPage] = useState(1);
-
-  // Filters (YYYY-MM-DD)
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
 
-  const logs = attendance ?? [];
+  const logs = useMemo(() => attendance ?? [], [attendance]);
 
   const employees: EmployeeOption[] = useMemo(() => {
     const map = new Map<string, string>();
 
     for (const log of logs) {
       const id = log.user_id;
-      if (!id) continue;
-
-      if (!map.has(id)) {
-        map.set(id, getFullName(log));
-      }
+      if (!id || map.has(id)) continue;
+      map.set(id, getFullName(log));
     }
 
     return Array.from(map.entries())
@@ -105,198 +201,306 @@ export default function AttendanceTable({ attendance }: AttendanceTableProps) {
     return logs.filter((log) => {
       if (selectedUserId && log.user_id !== selectedUserId) return false;
 
-      // date filter (only apply if both set)
-      if (!fromDate || !toDate) return true;
-      if (!log.created_at) return false;
+      if ((fromDate || toDate) && !log.created_at) return false;
 
-      const t = new Date(log.created_at).getTime();
-      return t >= toStartOfDayMs(fromDate) && t <= toEndOfDayMs(toDate);
+      const timestamp = log.created_at ? new Date(log.created_at).getTime() : 0;
+
+      if (fromDate && timestamp < toStartOfDayMs(fromDate)) return false;
+      if (toDate && timestamp > toEndOfDayMs(toDate)) return false;
+
+      return true;
     });
   }, [logs, fromDate, toDate, selectedUserId]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredAttendance.length / ITEMS_PER_PAGE));
+  const totalPages = Math.max(1, Math.ceil(filteredAttendance.length / pageSize));
   const safePage = Math.min(currentPage, totalPages);
 
   const paginatedAttendance = useMemo(() => {
-    const start = (safePage - 1) * ITEMS_PER_PAGE;
-    return filteredAttendance.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredAttendance, safePage]);
+    const start = (safePage - 1) * pageSize;
+    return filteredAttendance.slice(start, start + pageSize);
+  }, [filteredAttendance, pageSize, safePage]);
 
   const totalWorkedHoursInRange = useMemo(() => {
     return filteredAttendance.reduce((sum, log) => {
-      const h = calculateWorkedHours(log);
-      return sum + (typeof h === "number" ? h : 0);
+      const hours = calculateWorkedHours(log);
+      return sum + (typeof hours === "number" ? hours : 0);
     }, 0);
   }, [filteredAttendance]);
 
-  const clearFilters = useCallback(() => {
+  const completedEntries = useMemo(
+    () => filteredAttendance.filter((log) => Boolean(log.clock_out)).length,
+    [filteredAttendance]
+  );
+
+  const lateEntries = useMemo(
+    () =>
+      filteredAttendance.filter(
+        (log) => typeof log.late_minutes === "number" && log.late_minutes > 0
+      ).length,
+    [filteredAttendance]
+  );
+
+  const shouldShowEmployeeFilter =
+    showEmployeeFilter ?? employees.length > 1;
+
+  const activeFilterCount =
+    (selectedUserId ? 1 : 0) + (fromDate ? 1 : 0) + (toDate ? 1 : 0);
+
+  const rangeStart = filteredAttendance.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(filteredAttendance.length, safePage * pageSize);
+
+  function clearFilters() {
     setFromDate("");
     setToDate("");
     setSelectedUserId("");
     setCurrentPage(1);
-  }, []);
+  }
 
   return (
-    <>
-      {/* Filters */}
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-2">
-          {/* Employee */}
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-600">Employee</label>
-            <select
-              value={selectedUserId}
-              onChange={(e) => {
-                setSelectedUserId(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="h-9 rounded-md border border-gray-200 px-3 text-sm bg-white"
-            >
-              <option value="">All employees</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name}
-                </option>
-              ))}
-            </select>
+    <Card className="overflow-hidden">
+      <CardHeader className="space-y-5 border-b border-border/70 pb-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+          <div className="space-y-1">
+            <CardTitle className="text-lg">{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
           </div>
 
-          {/* From */}
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-600">From</label>
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => {
-                setFromDate(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="h-9 rounded-md border border-gray-200 px-3 text-sm"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary">{filteredAttendance.length} records</Badge>
+            <Badge variant="secondary">
+              {formatWorkedHours(totalWorkedHoursInRange)} total
+            </Badge>
           </div>
-
-          {/* To */}
-          <div className="flex flex-col">
-            <label className="text-xs text-gray-600">To</label>
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => {
-                setToDate(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="h-9 rounded-md border border-gray-200 px-3 text-sm"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={clearFilters}
-            className="h-9 rounded-md border px-3 text-sm text-gray-700 hover:bg-gray-100"
-          >
-            Clear
-          </button>
         </div>
 
-        <div className="text-sm text-gray-600">
-          Total hours (range):{" "}
-          <span className="font-semibold text-gray-900">
-            {formatWorkedHours(totalWorkedHoursInRange)}
-          </span>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              People
+            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+              {employees.length}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Completed
+            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+              {completedEntries}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Late entries
+            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+              {lateEntries}
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Filter state
+            </p>
+            <p className="mt-2 text-2xl font-semibold tracking-tight text-foreground">
+              {activeFilterCount}
+            </p>
+          </div>
         </div>
-      </div>
+      </CardHeader>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white">
-        <table className="min-w-full border-collapse">
-          <thead className="bg-gray-100 sticky top-0">
-            <tr className="text-left text-sm font-semibold text-gray-700">
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Name</th>
-              <th className="px-4 py-3">Login</th>
-              <th className="px-4 py-3">First Break</th>
-              <th className="px-4 py-3">End First Break</th>
-              <th className="px-4 py-3">Second Break</th>
-              <th className="px-4 py-3">End Second Break</th>
-              <th className="px-4 py-3">Logout</th>
-              <th className="px-4 py-3">Total Hours</th>
-              <th className="px-4 py-3 text-center">Late Minutes</th>
-            </tr>
-          </thead>
-
-          <tbody className="divide-y divide-gray-200 text-sm text-black">
-            {filteredAttendance.length ? (
-              paginatedAttendance.map((log, index) => {
-                const worked = calculateWorkedHours(log);
-                const name = getFullName(log);
-
-                return (
-                  <tr
-                    key={log.id}
-                    className={`${
-                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                    } hover:bg-gray-100 transition`}
+      <CardContent className="space-y-5 pt-6">
+        <div className="rounded-[24px] border border-border bg-secondary/35 p-4">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap">
+              {shouldShowEmployeeFilter ? (
+                <div className="flex min-w-[220px] flex-col gap-1.5">
+                  <label className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                    Employee
+                  </label>
+                  <Select
+                    value={selectedUserId || "__all__"}
+                    onValueChange={(value) => {
+                      setSelectedUserId(value === "__all__" ? "" : value);
+                      setCurrentPage(1);
+                    }}
                   >
-                    <td className="px-4 py-3 text-gray-600">
-                      {log.created_at ? new Date(log.created_at).toLocaleDateString() : "—"}
-                    </td>
+                    <SelectTrigger className="min-w-[220px]">
+                      <SelectValue placeholder="All employees" />
+                    </SelectTrigger>
+                    <SelectContent align="start">
+                      <SelectItem value="__all__">All employees</SelectItem>
+                      {employees.map((employee) => (
+                        <SelectItem key={employee.id} value={employee.id}>
+                          {employee.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : null}
 
-                    <td className="px-4 py-3 font-medium text-gray-900">{name}</td>
+              <SingleDateFilterPicker
+                label="From"
+                value={fromDate}
+                onChange={(value) => {
+                  setFromDate(value);
+                  setCurrentPage(1);
+                }}
+              />
 
-                    <td className="px-4 py-3">{formatTime(log.clock_in)}</td>
-                    <td className="px-4 py-3">{formatTime(log.break)}</td>
-                    <td className="px-4 py-3">{formatTime(log.end_break)}</td>
-                    <td className="px-4 py-3">{formatTime(log.second_break)}</td>
-                    <td className="px-4 py-3">{formatTime(log.end_second_break)}</td>
-                    <td className="px-4 py-3">{formatTime(log.clock_out)}</td>
+              <SingleDateFilterPicker
+                label="To"
+                value={toDate}
+                onChange={(value) => {
+                  setToDate(value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
 
-                    <td className="px-4 py-3 font-semibold text-gray-900">
-                      {formatWorkedHours(worked)}
-                    </td>
-
-                    <td className="px-4 py-3 text-center font-medium">
-                      {typeof log.late_minutes === "number" ? `${log.late_minutes} min` : "—"}
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={10} className="px-4 py-6 text-center text-gray-500">
-                  No attendance records found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 text-sm">
-          <span className="text-gray-600">
-            Page {safePage} of {totalPages}
-          </span>
-
-          <div className="flex gap-2">
-            <button
-              onClick={() => setCurrentPage(Math.max(safePage - 1, 1))}
-              disabled={safePage === 1}
-              className="px-3 py-1 rounded-md border text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
-            >
-              Previous
-            </button>
-
-            <button
-              onClick={() => setCurrentPage(Math.min(safePage + 1, totalPages))}
-              disabled={safePage === totalPages}
-              className="px-3 py-1 rounded-md border text-gray-700 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-100"
-            >
-              Next
-            </button>
+            <div className="flex items-center gap-2">
+              <Badge variant={activeFilterCount > 0 ? "outline" : "secondary"}>
+                {activeFilterCount} active filters
+              </Badge>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                disabled={activeFilterCount === 0}
+              >
+                Clear filters
+              </Button>
+            </div>
           </div>
         </div>
-      )}
-    </>
+
+        {filteredAttendance.length === 0 ? (
+          <div className="rounded-[24px] border border-dashed border-border bg-white px-6 py-12 text-center">
+            <p className="text-lg font-semibold tracking-tight text-foreground">
+              No attendance records found
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              Try adjusting the employee or date filters to widen the results.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-[24px] border border-border bg-white">
+            <div className="overflow-x-auto">
+              <table className="min-w-[1100px] w-full border-collapse">
+                <thead className="bg-secondary/65">
+                  <tr className="text-left">
+                    {[
+                      "Date",
+                      "Employee",
+                      "Clock in",
+                      "Break start",
+                      "Break end",
+                      "2nd break",
+                      "2nd break end",
+                      "Clock out",
+                      "Worked",
+                      "Late",
+                    ].map((heading) => (
+                      <th
+                        key={heading}
+                        className="px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground"
+                      >
+                        {heading}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody className="divide-y divide-border text-sm text-foreground">
+                  {paginatedAttendance.map((log) => {
+                    const worked = calculateWorkedHours(log);
+                    const name = getFullName(log);
+                    const role = getProfile(log)?.role ?? null;
+                    const hasLateMinutes =
+                      typeof log.late_minutes === "number" && log.late_minutes > 0;
+
+                    return (
+                      <tr
+                        key={log.id}
+                        className="transition-colors hover:bg-secondary/35"
+                      >
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {formatRowDate(log.created_at)}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <div className="space-y-1">
+                            <p className="font-semibold text-foreground">{name}</p>
+                            {role ? (
+                              <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                                {role}
+                              </p>
+                            ) : null}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3">{formatTime(log.clock_in)}</td>
+                        <td className="px-4 py-3">{formatTime(log.break)}</td>
+                        <td className="px-4 py-3">{formatTime(log.end_break)}</td>
+                        <td className="px-4 py-3">{formatTime(log.second_break)}</td>
+                        <td className="px-4 py-3">{formatTime(log.end_second_break)}</td>
+                        <td className="px-4 py-3">{formatTime(log.clock_out)}</td>
+
+                        <td className="px-4 py-3 font-semibold text-foreground">
+                          {formatWorkedHours(worked)}
+                        </td>
+
+                        <td className="px-4 py-3">
+                          <Badge variant={hasLateMinutes ? "warning" : "neutral"}>
+                            {hasLateMinutes ? `${log.late_minutes} min` : "On time"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {filteredAttendance.length > 0 ? (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Showing {rangeStart}-{rangeEnd} of {filteredAttendance.length} records
+            </p>
+
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">
+                Page {safePage} of {totalPages}
+              </Badge>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.max(safePage - 1, 1))}
+                disabled={safePage === 1}
+              >
+                Previous
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(Math.min(safePage + 1, totalPages))}
+                disabled={safePage === totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }

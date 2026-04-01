@@ -1,33 +1,82 @@
 "use client";
 
+import * as React from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { CalendarDays, PanelLeft, Settings2 } from "lucide-react";
 
-interface MenuItem {
-  id: number;
-  title: string;
-  link: string;
-}
+import { getDashboardPageMeta } from "@/lib/dashboard-navigation";
 
-const TopBar: React.FC = () => {
-  const pathname = usePathname();
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
-  const SidebarMenu: MenuItem[] = [
-    { id: 1, title: "Dashboard", link: "/dashboard" },
-    { id: 2, title: "Attendance Table", link: "/dashboard/attendance-table" },
-    { id: 3, title: "Request Leave", link: "/dashboard/request-leave" },
-    { id: 4, title: "Leave Approvals", link: "/dashboard/request-leave/admin" },
-    { id: 5, title: "Settings", link: "/dashboard/settings" },
-  ];
-
-  const currentItem = SidebarMenu.find((item) => item.link === pathname);
-
-  return (
-    <div className="w-full h-16 bg-linear-to-r from-white to-indigo-600 flex items-center justify-between px-6 shadow-md">
-      <h1 className="text-xl font-semibold">
-        {currentItem ? currentItem.title : "Dashboard"}
-      </h1>
-    </div>
-  );
+type TopBarProps = {
+  onOpenSidebar: () => void;
 };
 
-export default TopBar;
+export default function TopBar({ onOpenSidebar }: TopBarProps) {
+  const pathname = usePathname();
+  const pageMeta = React.useMemo(() => getDashboardPageMeta(pathname), [pathname]);
+  const formattedDate = React.useMemo(
+    () =>
+      new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }).format(new Date()),
+    []
+  );
+
+  return (
+    <header className="sticky top-0 z-20 border-b border-white/80 bg-background/80 backdrop-blur-xl">
+      <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
+        <div className="flex min-w-0 items-start gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            className="mt-0.5 lg:hidden"
+            onClick={onOpenSidebar}
+          >
+            <PanelLeft className="size-4" />
+            <span className="sr-only">Open navigation</span>
+          </Button>
+
+          <div className="min-w-0 space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="hidden sm:inline-flex">
+                Timewise workspace
+              </Badge>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:hidden">
+                Workspace
+              </p>
+            </div>
+
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-semibold tracking-tight text-foreground sm:text-xl">
+                {pageMeta.title}
+              </h1>
+              <p className="hidden max-w-2xl text-sm leading-relaxed text-muted-foreground md:block">
+                {pageMeta.description}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+          <div className="hidden items-center gap-2 rounded-full border border-border bg-white px-3 py-2 text-sm text-muted-foreground shadow-[0_6px_18px_rgba(15,23,42,0.04)] sm:flex">
+            <CalendarDays className="size-4" />
+            <span>{formattedDate}</span>
+          </div>
+
+          <Button asChild variant="outline" size="sm" className="rounded-full px-4">
+            <Link href="/dashboard/settings">
+              <Settings2 className="size-4" />
+              Settings
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </header>
+  );
+}

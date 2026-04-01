@@ -1,6 +1,16 @@
+import { LockKeyhole, UserRoundX } from "lucide-react";
+
 import AdminLeaveRequestsClient from "@/components/AdminLeaveRequestsClient";
+import EmptyState from "@/components/empty-state";
 import { createClient } from "@/lib/supabase/server";
-import type { AdminLeaveRequest, HalfDaySession, LeaveDuration, LeaveProfileRef, LeaveRequest, LeaveStatus } from "@/src/types/leave";
+import type {
+  AdminLeaveRequest,
+  HalfDaySession,
+  LeaveDuration,
+  LeaveProfileRef,
+  LeaveRequest,
+  LeaveStatus,
+} from "@/src/types/leave";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -44,7 +54,9 @@ type ProfileRow = {
 };
 
 function mapLeaveRequestRow(row: LeaveRequestRow): LeaveRequest {
-  const joinedType = Array.isArray(row.leave_types) ? row.leave_types[0] ?? null : row.leave_types;
+  const joinedType = Array.isArray(row.leave_types)
+    ? row.leave_types[0] ?? null
+    : row.leave_types;
 
   return {
     id: row.id,
@@ -81,13 +93,17 @@ export default async function AdminLeaveApprovalsPage() {
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError) console.error("Auth error:", userError);
+  if (userError) {
+    console.error("Auth error:", userError);
+  }
 
   if (!user) {
     return (
-      <div className="p-10">
-        <h2 className="text-xl font-semibold">Please log in</h2>
-      </div>
+      <EmptyState
+        title="Sign in required"
+        description="You need an active account session before admin leave approvals can be reviewed."
+        icon={UserRoundX}
+      />
     );
   }
 
@@ -97,15 +113,18 @@ export default async function AdminLeaveApprovalsPage() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profileError) console.error("Admin profile fetch error:", profileError);
+  if (profileError) {
+    console.error("Admin profile fetch error:", profileError);
+  }
 
   const role = adminProfile?.role ?? "employee";
   if (role !== "admin") {
     return (
-      <div className="p-10">
-        <h2 className="text-xl font-semibold">Access denied</h2>
-        <p className="text-black/60">Only admin users can review leave approvals.</p>
-      </div>
+      <EmptyState
+        title="Access restricted"
+        description="Only admin users can review, approve, or reject team leave requests."
+        icon={LockKeyhole}
+      />
     );
   }
 
@@ -138,9 +157,13 @@ export default async function AdminLeaveApprovalsPage() {
     )
     .order("submitted_at", { ascending: false });
 
-  if (leaveError) console.error("Leave request fetch error:", leaveError);
+  if (leaveError) {
+    console.error("Leave request fetch error:", leaveError);
+  }
 
-  const leaveRequests = ((leaveRows ?? []) as unknown as LeaveRequestRow[]).map(mapLeaveRequestRow);
+  const leaveRequests = ((leaveRows ?? []) as unknown as LeaveRequestRow[]).map(
+    mapLeaveRequestRow
+  );
 
   const profileIds = Array.from(
     new Set(
@@ -157,7 +180,9 @@ export default async function AdminLeaveApprovalsPage() {
       .select("id, first_name, last_name, role")
       .in("id", profileIds);
 
-    if (usersProfileError) console.error("Request profile fetch error:", usersProfileError);
+    if (usersProfileError) {
+      console.error("Request profile fetch error:", usersProfileError);
+    }
 
     profileMap = new Map(
       ((profileRows ?? []) as unknown as ProfileRow[]).map((profile) => [
@@ -175,21 +200,22 @@ export default async function AdminLeaveApprovalsPage() {
   const adminRequests: AdminLeaveRequest[] = leaveRequests.map((request) => ({
     ...request,
     requester: profileMap.get(request.user_id) ?? null,
-    approver: request.approver_id ? profileMap.get(request.approver_id) ?? null : null,
+    approver: request.approver_id
+      ? profileMap.get(request.approver_id) ?? null
+      : null,
   }));
 
-  const adminName = [adminProfile?.first_name, adminProfile?.last_name].filter(Boolean).join(" ").trim() || "Admin";
+  const adminName =
+    [adminProfile?.first_name, adminProfile?.last_name]
+      .filter(Boolean)
+      .join(" ")
+      .trim() || "Admin";
 
   return (
-    <div className="w-full px-5 pb-10">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-black sm:text-3xl">Leave Approvals</h1>
-        <p className="mt-2 text-sm text-black/60 sm:text-base">
-          Approve or reject employee leave requests with clear decision notes.
-        </p>
-      </div>
-
-      <AdminLeaveRequestsClient initialRequests={adminRequests} adminId={user.id} adminName={adminName} />
-    </div>
+    <AdminLeaveRequestsClient
+      initialRequests={adminRequests}
+      adminId={user.id}
+      adminName={adminName}
+    />
   );
 }

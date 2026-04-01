@@ -7,6 +7,20 @@ import { createClient } from "@/lib/supabase/server";
 import DashboardClient from "@/components/DashboardClient";
 import type { AttendanceRow } from "@/src/types/attendance";
 
+type AttendanceQueryRow = {
+  id: string;
+  user_id: string;
+  created_at: string;
+  clock_in: string | null;
+  break: string | null;
+  end_break: string | null;
+  second_break: string | null;
+  end_second_break: string | null;
+  clock_out: string | null;
+  late_minutes: number | null;
+  profiles: AttendanceRow["profiles"] | AttendanceRow["profiles"][number] | null;
+};
+
 export default async function DashboardPage() {
   const supabase = await createClient();
 
@@ -19,7 +33,7 @@ export default async function DashboardPage() {
   const [profileRes, attendanceRes] = await Promise.all([
     supabase
       .from("profiles")
-      .select("first_name, last_name")
+      .select("first_name, last_name, role")
       .eq("id", user.id)
       .single(),
 
@@ -50,8 +64,11 @@ export default async function DashboardPage() {
 
   const first_name = profileRes.data?.first_name ?? "";
   const last_name = profileRes.data?.last_name ?? "";
+  const role = profileRes.data?.role ?? "employee";
 
-  const attendance: AttendanceRow[] = (attendanceRes.data ?? []).map((row: any) => ({
+  const attendanceRows = (attendanceRes.data ?? []) as unknown as AttendanceQueryRow[];
+
+  const attendance: AttendanceRow[] = attendanceRows.map((row) => ({
   id: String(row.id),
   user_id: String(row.user_id),
   created_at: String(row.created_at),
@@ -66,12 +83,12 @@ export default async function DashboardPage() {
   late_minutes:
     typeof row.late_minutes === "number" ? row.late_minutes : row.late_minutes ?? null,
 
-  profiles: Array.isArray(row.profiles)
-    ? row.profiles
-    : row.profiles
-    ? [row.profiles]
-    : [],
-}));
+    profiles: Array.isArray(row.profiles)
+      ? row.profiles
+      : row.profiles
+        ? [row.profiles]
+        : [],
+  }));
 
 
 
@@ -79,6 +96,7 @@ export default async function DashboardPage() {
     <DashboardClient
       first_name={first_name}
       last_name={last_name}
+      userRole={role}
       attendance={attendance}
     />
   );

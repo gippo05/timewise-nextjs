@@ -1,6 +1,14 @@
+import { UserRoundX } from "lucide-react";
+
 import RequestLeaveClient from "@/components/RequestLeaveClient";
+import EmptyState from "@/components/empty-state";
 import { createClient } from "@/lib/supabase/server";
-import type { HalfDaySession, LeaveDuration, LeaveRequest, LeaveStatus } from "@/src/types/leave";
+import type {
+  HalfDaySession,
+  LeaveDuration,
+  LeaveRequest,
+  LeaveStatus,
+} from "@/src/types/leave";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -48,7 +56,9 @@ type LeaveRequestRow = {
 };
 
 function mapLeaveRequestRow(row: LeaveRequestRow): LeaveRequest {
-  const joinedType = Array.isArray(row.leave_types) ? row.leave_types[0] ?? null : row.leave_types;
+  const joinedType = Array.isArray(row.leave_types)
+    ? row.leave_types[0] ?? null
+    : row.leave_types;
 
   return {
     id: row.id,
@@ -85,13 +95,17 @@ export default async function LeaveRequestPage() {
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError) console.error("Auth error:", userError);
+  if (userError) {
+    console.error("Auth error:", userError);
+  }
 
   if (!user) {
     return (
-      <div className="p-10">
-        <h2 className="text-xl font-semibold">Please log in</h2>
-      </div>
+      <EmptyState
+        title="Sign in required"
+        description="You need an active account session before leave requests can be submitted or reviewed."
+        icon={UserRoundX}
+      />
     );
   }
 
@@ -136,24 +150,27 @@ export default async function LeaveRequestPage() {
       .order("submitted_at", { ascending: false }),
   ]);
 
-  if (profileRes.error) console.error("Profile role fetch error:", profileRes.error);
-  if (leaveTypesRes.error) console.error("Leave types fetch error:", leaveTypesRes.error);
-  if (leaveRequestsRes.error) console.error("Leave requests fetch error:", leaveRequestsRes.error);
+  if (profileRes.error) {
+    console.error("Profile role fetch error:", profileRes.error);
+  }
+  if (leaveTypesRes.error) {
+    console.error("Leave types fetch error:", leaveTypesRes.error);
+  }
+  if (leaveRequestsRes.error) {
+    console.error("Leave requests fetch error:", leaveRequestsRes.error);
+  }
 
   const userRole = profileRes.data?.role ?? "employee";
   const leaveTypes = (leaveTypesRes.data ?? []) as unknown as LeaveTypeRow[];
-  const leaveRequests = ((leaveRequestsRes.data ?? []) as unknown as LeaveRequestRow[]).map(mapLeaveRequestRow);
+  const leaveRequests = ((leaveRequestsRes.data ?? []) as unknown as LeaveRequestRow[]).map(
+    mapLeaveRequestRow
+  );
 
   return (
-    <div className="w-full px-5 pb-10">
-      <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-black sm:text-3xl">Request Leave</h1>
-        <p className="mt-2 text-sm text-black/60 sm:text-base">
-          Submit leave requests and monitor approval status from one place.
-        </p>
-      </div>
-
-      <RequestLeaveClient leaveTypes={leaveTypes} initialRequests={leaveRequests} userRole={userRole} />
-    </div>
+    <RequestLeaveClient
+      leaveTypes={leaveTypes}
+      initialRequests={leaveRequests}
+      userRole={userRole}
+    />
   );
 }

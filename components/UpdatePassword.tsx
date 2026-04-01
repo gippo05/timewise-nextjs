@@ -1,34 +1,33 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { createClient } from "@/lib/supabase/client";
+
 import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
-import { Label } from "@radix-ui/react-label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
+import { Label } from "./ui/label";
 
 export default function UpdatePassword({ userId }: { userId: string | null }) {
   const supabase = createClient();
   const router = useRouter();
 
   const [email, setEmail] = useState<string | null>(null);
-
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingEmail, setIsFetchingEmail] = useState(true);
 
-  // Load user email (needed for signInWithPassword verification)
   useEffect(() => {
     let cancelled = false;
 
-    (async () => {
+    async function loadEmail() {
       try {
-        // If page already has userId but auth session is missing, no point continuing.
         if (!userId) {
           if (!cancelled) setEmail(null);
           return;
@@ -41,7 +40,6 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
           return;
         }
 
-        // Make sure the user matches the prop (optional safety)
         if (data?.user?.id !== userId) {
           if (!cancelled) setEmail(null);
           return;
@@ -51,7 +49,9 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
       } finally {
         if (!cancelled) setIsFetchingEmail(false);
       }
-    })();
+    }
+
+    void loadEmail();
 
     return () => {
       cancelled = true;
@@ -63,8 +63,8 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
     return newPassword !== confirmPassword;
   }, [newPassword, confirmPassword]);
 
-  const canSubmit = useMemo(() => {
-    return (
+  const canSubmit = useMemo(
+    () =>
       !isLoading &&
       !isFetchingEmail &&
       !!userId &&
@@ -72,9 +72,18 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
       currentPassword.length > 0 &&
       newPassword.length >= 8 &&
       confirmPassword.length > 0 &&
-      !mismatch
-    );
-  }, [isLoading, isFetchingEmail, userId, email, currentPassword, newPassword, confirmPassword, mismatch]);
+      !mismatch,
+    [
+      isLoading,
+      isFetchingEmail,
+      userId,
+      email,
+      currentPassword,
+      newPassword,
+      confirmPassword,
+      mismatch,
+    ]
+  );
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -91,14 +100,15 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
     }
 
     if (newPassword.length < 8) {
-      toast.error("Password too short", { description: "Use at least 8 characters." });
+      toast.error("Password too short", {
+        description: "Use at least 8 characters.",
+      });
       return;
     }
 
     setIsLoading(true);
 
     try {
-      // 1) verify current password (re-auth)
       const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password: currentPassword,
@@ -109,22 +119,23 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
         return;
       }
 
-      // 2) update password
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       });
 
       if (updateError) {
-        toast.error("Failed to update password", { description: updateError.message });
+        toast.error("Failed to update password", {
+          description: updateError.message,
+        });
         return;
       }
 
-      toast.success("Password updated", { description: "Please log in again." });
+      toast.success("Password updated", {
+        description: "Please log in again.",
+      });
 
-      // 3) sign out after password change
       await supabase.auth.signOut();
 
-      // clear fields
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -136,23 +147,29 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
   }
 
   return (
-    <Card className="w-full rounded-2xl border-black/10 shadow-sm">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-xl font-semibold tracking-tight">Security</CardTitle>
-        <CardDescription className="text-sm text-black/60">
-          Update your password. You’ll be signed out after changing it.
-        </CardDescription>
+    <Card className="h-full">
+      <CardHeader className="flex flex-row items-start justify-between gap-4">
+        <div className="space-y-1">
+          <CardTitle className="text-xl">Security</CardTitle>
+          <CardDescription>
+            Update your password and re-authenticate the account cleanly.
+          </CardDescription>
+        </div>
+
+        <div className="flex size-10 items-center justify-center rounded-2xl border border-border bg-secondary text-foreground">
+          <ShieldCheck className="size-4" />
+        </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-5">
         {!userId ? (
-          <p className="text-sm text-black/60">You need to be logged in to change your password.</p>
+          <p className="text-sm text-muted-foreground">
+            You need to be logged in to change your password.
+          </p>
         ) : (
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={onSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="current_password" className="text-sm text-black/80">
-                Current password
-              </Label>
+              <Label htmlFor="current_password">Current password</Label>
               <Input
                 id="current_password"
                 type="password"
@@ -164,9 +181,7 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="new_password" className="text-sm text-black/80">
-                New password
-              </Label>
+              <Label htmlFor="new_password">New password</Label>
               <Input
                 id="new_password"
                 type="password"
@@ -175,13 +190,13 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
                 autoComplete="new-password"
                 disabled={isLoading || isFetchingEmail}
               />
-              <p className="text-xs text-black/50">At least 8 characters.</p>
+              <p className="text-xs text-muted-foreground">
+                Use at least 8 characters for a strong password.
+              </p>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirm_password" className="text-sm text-black/80">
-                Confirm new password
-              </Label>
+              <Label htmlFor="confirm_password">Confirm new password</Label>
               <Input
                 id="confirm_password"
                 type="password"
@@ -191,20 +206,24 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
                 disabled={isLoading || isFetchingEmail}
               />
 
-              {mismatch && (
-                <p className="text-sm text-red-600">Passwords do not match.</p>
-              )}
+              {mismatch ? (
+                <p className="text-sm text-rose-600">Passwords do not match.</p>
+              ) : null}
             </div>
 
-            <Button type="submit" disabled={!canSubmit} className="w-full h-11 rounded-xl">
+            <div className="rounded-2xl border border-border bg-secondary/35 px-4 py-3 text-sm text-muted-foreground">
+              Password changes sign you out after the update, which keeps the account session secure across devices.
+            </div>
+
+            <Button type="submit" disabled={!canSubmit} className="w-full">
               {isLoading ? "Updating..." : "Update password"}
             </Button>
 
-            {!isFetchingEmail && !email && (
-              <p className="text-xs text-red-600">
-                This account has no email (or your session is invalid). Please log in again.
+            {!isFetchingEmail && !email ? (
+              <p className="text-sm text-rose-600">
+                This account has no email address or the session is no longer valid. Please log in again.
               </p>
-            )}
+            ) : null}
           </form>
         )}
       </CardContent>

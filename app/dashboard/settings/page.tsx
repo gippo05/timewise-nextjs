@@ -1,7 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
-import UpdateProfile from "@/components/UpdateProfile";
-import UpdatePassword from "@/components/UpdatePassword";
+import { UserRoundX } from "lucide-react";
+
 import AvatarUploaderCard from "@/components/UploadAvatar";
+import UpdatePassword from "@/components/UpdatePassword";
+import UpdateProfile from "@/components/UpdateProfile";
+import EmptyState from "@/components/empty-state";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -11,13 +14,17 @@ export default async function SettingsPage() {
     error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError) console.error(userError);
+  if (userError) {
+    console.error(userError);
+  }
 
   if (!user) {
     return (
-      <div className="p-10">
-        <h2 className="text-xl font-semibold">Please log in</h2>
-      </div>
+      <EmptyState
+        title="Sign in required"
+        description="You need an active account session before profile and security settings can be updated."
+        icon={UserRoundX}
+      />
     );
   }
 
@@ -27,38 +34,24 @@ export default async function SettingsPage() {
     .eq("id", user.id)
     .single();
 
-  if (profileError) console.error(profileError);
+  if (profileError) {
+    console.error(profileError);
+  }
+
+  const fallbackName =
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() ||
+    "Team member";
 
   return (
-  <div className="px-5 pb-10 w-full">
-    {/* Header */}
-    <div className="mb-8">
-      <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-black">
-        Settings
-      </h1>
-      <p className="mt-2 text-sm sm:text-base text-black/60">
-        Manage your profile, security, and account preferences.
-      </p>
-    </div>
-
-    {/* Layout */}
-    <div className="grid grid-cols-1 gap-6 w-full">
-      {/* Avatar full width */}
-      <div className="w-full min-w-0">
-        <AvatarUploaderCard userId={user.id} />
+    <div className="grid gap-6 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+      <div className="min-w-0">
+        <AvatarUploaderCard userId={user.id} fallbackName={fallbackName} />
       </div>
 
-      {/* Profile + Password full row */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch w-full">
-        <div className="w-full min-w-0 h-full">
-          <UpdateProfile userId={user.id} profile={profile} />
-        </div>
-
-        <div className="w-full min-w-0 h-full">
-          <UpdatePassword userId={user.id} />
-        </div>
+      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+        <UpdateProfile userId={user.id} profile={profile} />
+        <UpdatePassword userId={user.id} />
       </div>
     </div>
-  </div>
   );
 }
