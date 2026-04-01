@@ -4,6 +4,11 @@ TimeWise is a modern, web-based attendance tracking system designed for teams an
 
 ⚡ This project was originally built using the MERN stack and later rebuilt using Next.js, Supabase, and shadcn/ui to improve scalability, development speed, and system architecture.
 
+![timewise-rebuilt1](https://github.com/user-attachments/assets/69315100-c7d9-4716-ad22-6d5800058ebb)
+
+![timewise-rebuilt2](https://github.com/user-attachments/assets/6549b773-78dd-4a4b-b560-c2a817d9071d)
+
+
 🚀 Live Evolution
 🧱 Previous Version (MERN)
 
@@ -15,7 +20,6 @@ React
 Node.js
 JWT Authentication
 
-🔗 Backend Repo: https://github.com/gippo05/timewise-login-system-backend
 
 ⚡ Current Version (Rebuilt)
 
