@@ -21,9 +21,9 @@ export default function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <Card className={cn("border-dashed border-border/90 bg-white/85", className)}>
+    <Card className={cn("border-dashed", className)}>
       <CardContent className="flex flex-col items-start gap-5 px-6 py-8 sm:px-8">
-        <div className="flex size-12 items-center justify-center rounded-2xl border border-border bg-secondary text-foreground">
+        <div className="app-icon-surface flex size-12 items-center justify-center rounded-2xl border text-foreground">
           <Icon className="size-5" />
         </div>
         <div className="space-y-1.5">

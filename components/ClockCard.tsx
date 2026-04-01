@@ -349,7 +349,7 @@ export default function ClockCard() {
           <Badge variant={stateBadge.variant}>{stateBadge.label}</Badge>
         </div>
 
-        <div className="rounded-[24px] border border-border bg-secondary/50 px-4 py-5">
+        <div className="app-surface-subtle rounded-[24px] border px-4 py-5">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             {todayLabel}
           </p>
@@ -364,7 +364,7 @@ export default function ClockCard() {
 
       <CardContent className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-white px-4 py-3">
+          <div className="app-surface-subtle rounded-2xl border px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Clock in
             </p>
@@ -373,7 +373,7 @@ export default function ClockCard() {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-white px-4 py-3">
+          <div className="app-surface-subtle rounded-2xl border px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Breaks
             </p>
@@ -441,7 +441,7 @@ export default function ClockCard() {
           </div>
         ) : null}
 
-        <div className="rounded-2xl border border-border bg-white px-4 py-3 text-sm leading-relaxed text-muted-foreground">
+        <div className="app-surface-subtle rounded-2xl border px-4 py-3 text-sm leading-relaxed text-muted-foreground">
           Keep your daily record accurate by verifying clock-in, break, and clock-out actions as they happen.
         </div>
       </CardContent>

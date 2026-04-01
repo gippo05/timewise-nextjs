@@ -1,7 +1,6 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOut, X } from "lucide-react";
@@ -16,7 +15,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import mainLogo from "@/public/TimeWISE logo.png";
 
 type SidebarProps = {
   mobileOpen?: boolean;
@@ -121,7 +119,7 @@ export default function SideBar({
         aria-label="Close navigation"
         onClick={onClose}
         className={cn(
-          "fixed inset-0 z-30 bg-slate-900/20 backdrop-blur-sm transition-opacity lg:hidden",
+          "fixed inset-0 z-30 bg-[var(--surface-scrim)] backdrop-blur-sm transition-opacity lg:hidden",
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         )}
       />
@@ -133,16 +131,6 @@ export default function SideBar({
         )}
       >
         <div className="mb-4 flex items-center justify-between gap-3 px-2">
-          <div className="relative h-8 w-32">
-            <Image
-              src={mainLogo}
-              alt="Timewise"
-              fill
-              className="object-contain object-left"
-              priority
-            />
-          </div>
-
           <Button
             type="button"
             variant="ghost"
@@ -155,7 +143,7 @@ export default function SideBar({
           </Button>
         </div>
 
-        <div className="rounded-[24px] border border-white/90 bg-white/95 p-4 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+        <div className="app-surface-strong rounded-[24px] border p-4">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Control center
           </p>
@@ -171,58 +159,52 @@ export default function SideBar({
         <Separator className="my-4" />
 
         <ScrollArea className="flex-1">
-          <nav className="space-y-1.5 pr-2">
+          <nav className="space-y-2 pr-2">
             {navItems.map((item) => {
               const isActive = pathname === item.href;
               const Icon = item.icon;
 
               return (
-                <Button
+                <Link
                   key={item.href}
-                  asChild
-                  variant="ghost"
+                  href={item.href}
+                  prefetch
+                  onClick={() => onClose?.()}
                   className={cn(
-                    "h-auto w-full justify-start rounded-2xl border px-0 py-0 text-left shadow-none",
+                    "group flex w-full min-w-0 items-start gap-3 rounded-2xl border px-3.5 py-3.5 text-left whitespace-normal transition-[background-color,border-color,box-shadow,color]",
                     isActive
-                      ? "border-slate-200 bg-white text-foreground shadow-[0_10px_24px_rgba(15,23,42,0.05)] hover:bg-white"
-                      : "border-transparent bg-transparent text-slate-600 hover:border-white/70 hover:bg-white/75 hover:text-foreground"
+                      ? "app-surface-strong text-foreground hover:bg-[var(--surface-panel-strong)]"
+                      : "border-transparent bg-transparent text-muted-foreground hover:border-[color:var(--surface-border-strong)] hover:bg-[var(--surface-overlay)] hover:text-foreground hover:shadow-[var(--shadow-field)]"
                   )}
                 >
-                  <Link
-                    href={item.href}
-                    prefetch
-                    onClick={() => onClose?.()}
-                    className="flex w-full items-start gap-3 px-3.5 py-3.5"
+                  <span
+                    className={cn(
+                      "mt-0.5 flex size-9 shrink-0 self-start items-center justify-center rounded-2xl border app-icon-surface",
+                      isActive
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "text-foreground"
+                    )}
                   >
-                    <span
-                      className={cn(
-                        "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-2xl border",
-                        isActive
-                          ? "border-slate-200 bg-slate-900 text-white"
-                          : "border-border bg-white text-slate-700"
-                      )}
-                    >
-                      <Icon className="size-4" />
-                    </span>
+                    <Icon className="size-4" />
+                  </span>
 
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold">
-                        {item.label}
-                      </span>
-                      <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
-                        {item.description}
-                      </span>
+                  <span className="min-w-0 flex-1 whitespace-normal break-words">
+                    <span className="block whitespace-normal break-words text-sm font-semibold leading-5">
+                      {item.label}
                     </span>
-                  </Link>
-                </Button>
+                    <span className="mt-1 block whitespace-normal break-words text-xs leading-5 text-muted-foreground">
+                      {item.description}
+                    </span>
+                  </span>
+                </Link>
               );
             })}
           </nav>
         </ScrollArea>
 
-        <div className="mt-4 rounded-[24px] border border-white/90 bg-white/95 p-3 shadow-[0_14px_36px_rgba(15,23,42,0.05)]">
+        <div className="app-surface-strong mt-0.5 rounded-[24px] border px-3 py-3.5 pb-0.5">
           <div className="flex items-center gap-3 px-1 pb-3">
-            <Avatar className="size-11 border border-border bg-secondary">
+            <Avatar className="app-icon-surface size-11 border">
               <AvatarImage src={avatarUrl ?? undefined} alt="Profile avatar" />
               <AvatarFallback className="text-sm font-semibold text-foreground">
                 {displayName?.[0]?.toUpperCase() ?? "U"}
@@ -249,7 +231,7 @@ export default function SideBar({
             Sign out
           </Button>
 
-          <p className="mt-3 px-1 text-[11px] text-muted-foreground">
+          <p className="mt-2 px-1 text-[11px] text-muted-foreground">
             Timewise v0.1
           </p>
         </div>

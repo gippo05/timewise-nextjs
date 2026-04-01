@@ -1,5 +1,6 @@
 import Image from "next/image";
 
+import ThemeToggle from "@/components/theme-toggle";
 import logo from "@/public/TimeWISE logo.png";
 
 type AuthShellProps = {
@@ -23,11 +24,11 @@ export default function AuthShell({
 }: AuthShellProps) {
   return (
     <div className="min-h-screen px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
-      <div className="mx-auto grid min-h-[calc(100vh-2rem)] max-w-6xl overflow-hidden rounded-[32px] border border-white/80 bg-white/90 shadow-[0_28px_80px_rgba(15,23,42,0.08)] backdrop-blur xl:grid-cols-[1.08fr_0.92fr]">
-        <div className="hidden border-r border-border bg-[#f7f9fc] p-10 xl:flex xl:flex-col xl:justify-between">
+      <div className="app-surface-strong mx-auto grid min-h-[calc(100vh-2rem)] max-w-6xl overflow-hidden rounded-[32px] border xl:grid-cols-[1.08fr_0.92fr]">
+        <div className="hidden border-r border-border bg-[var(--surface-subtle)] p-10 xl:flex xl:flex-col xl:justify-between">
           <div className="space-y-12">
             <div className="space-y-5">
-              <div className="inline-flex items-center rounded-full border border-border bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <div className="inline-flex items-center rounded-full border border-border bg-[var(--surface-panel-strong)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Timewise workspace
               </div>
               <div className="space-y-4">
@@ -46,13 +47,13 @@ export default function AuthShell({
             </div>
 
             <div className="grid gap-3">
-              {highlights.map((item) => (
-                <div
-                  key={item}
-                  className="rounded-2xl border border-white bg-white/90 px-4 py-4 text-sm leading-relaxed text-slate-600 shadow-[0_10px_24px_rgba(15,23,42,0.04)]"
-                >
-                  {item}
-                </div>
+                {highlights.map((item) => (
+                  <div
+                    key={item}
+                    className="app-surface-strong rounded-2xl border px-4 py-4 text-sm leading-relaxed text-muted-foreground"
+                  >
+                    {item}
+                  </div>
               ))}
             </div>
           </div>
@@ -62,8 +63,12 @@ export default function AuthShell({
           </p>
         </div>
 
-        <div className="flex items-center justify-center bg-white px-5 py-8 sm:px-8 lg:px-10">
+        <div className="flex items-center justify-center bg-transparent px-5 py-8 sm:px-8 lg:px-10">
           <div className="w-full max-w-md space-y-8">
+            <div className="flex justify-end">
+              <ThemeToggle />
+            </div>
+
             <div className="space-y-3 xl:hidden">
               <div className="relative h-9 w-32">
                 <Image src={logo} alt="Timewise" fill className="object-contain object-left" priority />

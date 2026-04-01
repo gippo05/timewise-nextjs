@@ -86,7 +86,7 @@ export default function WorkedHoursCard({
           </p>
         </div>
 
-        <div className="flex size-10 items-center justify-center rounded-2xl border border-border bg-secondary text-foreground">
+        <div className="app-icon-surface flex size-10 items-center justify-center rounded-2xl border text-foreground">
           <Clock3 className="size-4" />
         </div>
       </CardHeader>
@@ -98,7 +98,7 @@ export default function WorkedHoursCard({
           </p>
         ) : (
           <>
-            <div className="rounded-[24px] border border-border bg-secondary/50 px-4 py-5">
+            <div className="app-surface-subtle rounded-[24px] border px-4 py-5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Worked time
               </p>
@@ -122,7 +122,7 @@ export default function WorkedHoursCard({
               </Badge>
             </div>
 
-            <div className="rounded-2xl border border-border bg-white px-4 py-3 text-sm text-muted-foreground">
+            <div className="app-surface-subtle rounded-2xl border px-4 py-3 text-sm text-muted-foreground">
               <div className="flex items-start gap-3">
                 {isLate ? (
                   <CircleAlert className="mt-0.5 size-4 text-amber-600" />

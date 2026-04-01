@@ -53,7 +53,7 @@ export default function LoginPage() {
         </p>
       }
     >
-      <div className="rounded-[28px] border border-border bg-[#f8fafc] p-6 shadow-[0_16px_40px_rgba(15,23,42,0.05)]">
+      <div className="app-surface-strong rounded-[28px] border p-6 shadow-[var(--shadow-soft)]">
         <form onSubmit={handleLogin} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>

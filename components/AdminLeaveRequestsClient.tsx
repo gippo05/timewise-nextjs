@@ -203,7 +203,7 @@ export default function AdminLeaveRequestsClient({
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-border bg-secondary/35 p-4">
+          <div className="app-surface-subtle rounded-[24px] border p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="space-y-2">
                 <Label htmlFor="status-filter" className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -236,7 +236,7 @@ export default function AdminLeaveRequestsClient({
 
         <CardContent className="space-y-4">
           {visibleRequests.length === 0 ? (
-            <div className="rounded-[24px] border border-dashed border-border bg-white px-6 py-12 text-center">
+            <div className="app-surface-subtle rounded-[24px] border border-dashed px-6 py-12 text-center">
               <p className="text-lg font-semibold tracking-tight text-foreground">
                 No requests for this filter
               </p>
@@ -257,7 +257,7 @@ export default function AdminLeaveRequestsClient({
 
                 return (
                   <React.Fragment key={request.id}>
-                    <div className="rounded-[24px] border border-border bg-white px-4 py-4">
+                    <div className="app-surface-strong rounded-[24px] border px-4 py-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
@@ -278,7 +278,7 @@ export default function AdminLeaveRequestsClient({
                       </div>
 
                       <div className="mt-4 grid gap-3 md:grid-cols-3">
-                        <div className="rounded-2xl border border-border bg-secondary/35 px-4 py-3">
+                        <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             Dates
                           </p>
@@ -286,7 +286,7 @@ export default function AdminLeaveRequestsClient({
                             {formatRange(request.start_date, request.end_date)}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-border bg-secondary/35 px-4 py-3">
+                        <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             Duration
                           </p>
@@ -296,7 +296,7 @@ export default function AdminLeaveRequestsClient({
                               : `Half day (${request.half_day_session?.toUpperCase() ?? "-"})`}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-border bg-secondary/35 px-4 py-3">
+                        <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             Reviewed
                           </p>
@@ -309,7 +309,7 @@ export default function AdminLeaveRequestsClient({
                       </div>
 
                       <div className="mt-4 space-y-3">
-                        <div className="rounded-2xl border border-border bg-secondary/20 px-4 py-3">
+                        <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             Employee reason
                           </p>
@@ -357,7 +357,7 @@ export default function AdminLeaveRequestsClient({
                             </div>
                           </div>
                         ) : (
-                          <div className="rounded-2xl border border-border bg-white px-4 py-3">
+                          <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                               Decision reason
                             </p>

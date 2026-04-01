@@ -1,22 +1,17 @@
 "use client";
 
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
-import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
-
-export default function ActivityTracker(){
-
+export default function ActivityTracker() {
   return (
-    <Card className="w-full rounded-2xl border-black/10 shadow-sm h-full">
+    <Card className="h-full w-full">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-base sm:text-lg font-semibold tracking-tight text-black text-center">
+        <CardTitle className="text-center text-base font-semibold tracking-tight sm:text-lg">
           Activity Tracker
         </CardTitle>
       </CardHeader>
 
-      <CardContent>
-       
-    
-      </CardContent>
+      <CardContent />
     </Card>
   );
 }

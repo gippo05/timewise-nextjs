@@ -258,7 +258,7 @@ export default function AttendanceTable({
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="space-y-5 border-b border-border/70 pb-5">
+      <CardHeader className="space-y-5 border-b border-[color:var(--surface-border-strong)] pb-5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="space-y-1">
             <CardTitle className="text-lg">{title}</CardTitle>
@@ -274,7 +274,7 @@ export default function AttendanceTable({
         </div>
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+          <div className="app-surface-subtle rounded-2xl border px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               People
             </p>
@@ -283,7 +283,7 @@ export default function AttendanceTable({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+          <div className="app-surface-subtle rounded-2xl border px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Completed
             </p>
@@ -292,7 +292,7 @@ export default function AttendanceTable({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+          <div className="app-surface-subtle rounded-2xl border px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Late entries
             </p>
@@ -301,7 +301,7 @@ export default function AttendanceTable({
             </p>
           </div>
 
-          <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+          <div className="app-surface-subtle rounded-2xl border px-4 py-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Filter state
             </p>
@@ -313,7 +313,7 @@ export default function AttendanceTable({
       </CardHeader>
 
       <CardContent className="space-y-5 pt-6">
-        <div className="rounded-[24px] border border-border bg-secondary/35 p-4">
+        <div className="app-surface-subtle rounded-[24px] border p-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
             <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:flex-wrap">
               {shouldShowEmployeeFilter ? (
@@ -380,7 +380,7 @@ export default function AttendanceTable({
         </div>
 
         {filteredAttendance.length === 0 ? (
-          <div className="rounded-[24px] border border-dashed border-border bg-white px-6 py-12 text-center">
+          <div className="app-surface-subtle rounded-[24px] border border-dashed px-6 py-12 text-center">
             <p className="text-lg font-semibold tracking-tight text-foreground">
               No attendance records found
             </p>
@@ -389,10 +389,10 @@ export default function AttendanceTable({
             </p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-[24px] border border-border bg-white">
+          <div className="app-surface-strong overflow-hidden rounded-[24px] border">
             <div className="overflow-x-auto">
-              <table className="min-w-[1100px] w-full border-collapse">
-                <thead className="bg-secondary/65">
+              <table className="w-full min-w-[1100px] border-collapse">
+                <thead className="app-table-head">
                   <tr className="text-left">
                     {[
                       "Date",
@@ -427,7 +427,7 @@ export default function AttendanceTable({
                     return (
                       <tr
                         key={log.id}
-                        className="transition-colors hover:bg-secondary/35"
+                        className="app-row-hover"
                       >
                         <td className="px-4 py-3 text-muted-foreground">
                           {formatRowDate(log.created_at)}

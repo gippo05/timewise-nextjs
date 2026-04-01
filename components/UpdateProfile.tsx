@@ -73,7 +73,7 @@ export default function UpdateProfile({
           </CardDescription>
         </div>
 
-        <div className="flex size-10 items-center justify-center rounded-2xl border border-border bg-secondary text-foreground">
+        <div className="app-icon-surface flex size-10 items-center justify-center rounded-2xl border text-foreground">
           <UserRound className="size-4" />
         </div>
       </CardHeader>
@@ -102,7 +102,7 @@ export default function UpdateProfile({
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-secondary/35 px-4 py-3 text-sm text-muted-foreground">
+          <div className="app-surface-subtle rounded-2xl border px-4 py-3 text-sm text-muted-foreground">
             Keep your name consistent here so leave approvals and attendance logs stay easy to recognize.
           </div>
 

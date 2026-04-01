@@ -502,7 +502,7 @@ export default function RequestLeaveClient({
                 </Popover>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+                  <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                       Start date
                     </p>
@@ -510,7 +510,7 @@ export default function RequestLeaveClient({
                       {formatPickerDate(form.startDate)}
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-border bg-secondary/40 px-4 py-3">
+                  <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                       End date
                     </p>
@@ -586,7 +586,7 @@ export default function RequestLeaveClient({
                   className={cn(
                     "text-xs",
                     reasonLength < MIN_REASON_LENGTH
-                      ? "text-rose-600"
+                      ? "text-rose-600 dark:text-rose-300"
                       : "text-muted-foreground"
                   )}
                 >
@@ -595,7 +595,7 @@ export default function RequestLeaveClient({
               </div>
 
               {formError ? (
-                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/40 dark:text-rose-200">
                   {formError}
                 </p>
               ) : null}
@@ -632,7 +632,7 @@ export default function RequestLeaveClient({
 
           <CardContent className="space-y-4">
             {requests.length === 0 ? (
-              <div className="rounded-[24px] border border-dashed border-border bg-white px-6 py-12 text-center">
+              <div className="app-surface-subtle rounded-[24px] border border-dashed px-6 py-12 text-center">
                 <p className="text-lg font-semibold tracking-tight text-foreground">
                   No leave requests yet
                 </p>
@@ -644,7 +644,7 @@ export default function RequestLeaveClient({
               <div className="space-y-4">
                 {requests.map((request, index) => (
                   <React.Fragment key={request.id}>
-                    <div className="rounded-[24px] border border-border bg-white px-4 py-4">
+                    <div className="app-surface-strong rounded-[24px] border px-4 py-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="space-y-2">
                           <div className="flex flex-wrap items-center gap-2">
@@ -664,7 +664,7 @@ export default function RequestLeaveClient({
                       </div>
 
                       <div className="mt-4 grid gap-3 md:grid-cols-3">
-                        <div className="rounded-2xl border border-border bg-secondary/35 px-4 py-3">
+                        <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             Dates
                           </p>
@@ -672,7 +672,7 @@ export default function RequestLeaveClient({
                             {formatRange(request.start_date, request.end_date)}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-border bg-secondary/35 px-4 py-3">
+                        <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             Duration
                           </p>
@@ -682,7 +682,7 @@ export default function RequestLeaveClient({
                               : `Half day (${request.half_day_session?.toUpperCase() ?? "-"})`}
                           </p>
                         </div>
-                        <div className="rounded-2xl border border-border bg-secondary/35 px-4 py-3">
+                        <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             Last update
                           </p>
@@ -695,7 +695,7 @@ export default function RequestLeaveClient({
                       </div>
 
                       <div className="mt-4 space-y-3">
-                        <div className="rounded-2xl border border-border bg-secondary/20 px-4 py-3">
+                        <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                             Reason
                           </p>
@@ -705,7 +705,7 @@ export default function RequestLeaveClient({
                         </div>
 
                         {request.approver_note ? (
-                          <div className="rounded-2xl border border-border bg-white px-4 py-3">
+                          <div className="app-surface-subtle rounded-2xl border px-4 py-3">
                             <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                               Approver note
                             </p>

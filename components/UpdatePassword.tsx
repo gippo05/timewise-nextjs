@@ -156,7 +156,7 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
           </CardDescription>
         </div>
 
-        <div className="flex size-10 items-center justify-center rounded-2xl border border-border bg-secondary text-foreground">
+        <div className="app-icon-surface flex size-10 items-center justify-center rounded-2xl border text-foreground">
           <ShieldCheck className="size-4" />
         </div>
       </CardHeader>
@@ -207,11 +207,11 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
               />
 
               {mismatch ? (
-                <p className="text-sm text-rose-600">Passwords do not match.</p>
+                <p className="text-sm text-rose-600 dark:text-rose-300">Passwords do not match.</p>
               ) : null}
             </div>
 
-            <div className="rounded-2xl border border-border bg-secondary/35 px-4 py-3 text-sm text-muted-foreground">
+            <div className="app-surface-subtle rounded-2xl border px-4 py-3 text-sm text-muted-foreground">
               Password changes sign you out after the update, which keeps the account session secure across devices.
             </div>
 
@@ -220,7 +220,7 @@ export default function UpdatePassword({ userId }: { userId: string | null }) {
             </Button>
 
             {!isFetchingEmail && !email ? (
-              <p className="text-sm text-rose-600">
+              <p className="text-sm text-rose-600 dark:text-rose-300">
                 This account has no email address or the session is no longer valid. Please log in again.
               </p>
             ) : null}

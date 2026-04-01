@@ -9,6 +9,7 @@ import { getDashboardPageMeta } from "@/lib/dashboard-navigation";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import ThemeToggle from "@/components/theme-toggle";
 
 type TopBarProps = {
   onOpenSidebar: () => void;
@@ -28,7 +29,7 @@ export default function TopBar({ onOpenSidebar }: TopBarProps) {
   );
 
   return (
-    <header className="sticky top-0 z-20 border-b border-white/80 bg-background/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-20 border-b border-[color:var(--surface-border-strong)] bg-background/75 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex min-w-0 items-start gap-3">
           <Button
@@ -64,10 +65,12 @@ export default function TopBar({ onOpenSidebar }: TopBarProps) {
         </div>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          <div className="hidden items-center gap-2 rounded-full border border-border bg-white px-3 py-2 text-sm text-muted-foreground shadow-[0_6px_18px_rgba(15,23,42,0.04)] sm:flex">
+          <div className="hidden items-center gap-2 rounded-full border border-border bg-[var(--surface-panel-strong)] px-3 py-2 text-sm text-muted-foreground shadow-[var(--shadow-field)] sm:flex">
             <CalendarDays className="size-4" />
             <span>{formattedDate}</span>
           </div>
+
+          <ThemeToggle />
 
           <Button asChild variant="outline" size="sm" className="rounded-full px-4">
             <Link href="/dashboard/settings">

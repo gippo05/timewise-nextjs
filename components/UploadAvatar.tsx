@@ -177,9 +177,9 @@ export default function AvatarUploaderCard({
       </CardHeader>
 
       <CardContent className="space-y-5">
-        <div className="rounded-[24px] border border-border bg-secondary/40 px-4 py-5">
+        <div className="app-surface-subtle rounded-[24px] border px-4 py-5">
           <div className="flex items-center gap-4">
-            <Avatar className="size-20 border border-border bg-white">
+            <Avatar className="app-icon-surface size-20 border">
               <AvatarImage src={avatarUrl ?? undefined} alt="Profile avatar" />
               <AvatarFallback className="text-lg font-semibold text-foreground">
                 {initials(displayName)}

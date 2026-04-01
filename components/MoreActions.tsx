@@ -69,10 +69,10 @@ export default function MoreActions({ userRole }: MoreActionsProps) {
               key={action.href}
               href={action.href}
               className={cn(
-                "group flex items-start gap-3 rounded-2xl border border-border bg-secondary/45 px-4 py-4 transition-colors hover:bg-secondary"
+                "group app-surface-subtle flex items-start gap-3 rounded-2xl border px-4 py-4 transition-[background-color,border-color,box-shadow] hover:bg-[var(--surface-hover)] hover:shadow-[var(--shadow-field)]"
               )}
             >
-              <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl border border-border bg-white text-foreground">
+              <span className="app-icon-surface flex size-10 shrink-0 items-center justify-center rounded-2xl border text-foreground">
                 <Icon className="size-4" />
               </span>
 

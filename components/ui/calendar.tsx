@@ -57,12 +57,12 @@ function Calendar({
         ),
         button_previous: cn(
           buttonVariants({ variant: buttonVariant }),
-          "!size-9 !rounded-full !border-0 !bg-transparent p-0 text-slate-600 !shadow-none select-none hover:!bg-slate-100 hover:!text-slate-900 aria-disabled:opacity-40",
+          "!size-9 !rounded-full !border-0 !bg-transparent p-0 text-muted-foreground !shadow-none select-none hover:!bg-accent hover:!text-foreground aria-disabled:opacity-40",
           defaultClassNames.button_previous
         ),
         button_next: cn(
           buttonVariants({ variant: buttonVariant }),
-          "!size-9 !rounded-full !border-0 !bg-transparent p-0 text-slate-600 !shadow-none select-none hover:!bg-slate-100 hover:!text-slate-900 aria-disabled:opacity-40",
+          "!size-9 !rounded-full !border-0 !bg-transparent p-0 text-muted-foreground !shadow-none select-none hover:!bg-accent hover:!text-foreground aria-disabled:opacity-40",
           defaultClassNames.button_next
         ),
         month_caption: cn(
@@ -74,7 +74,7 @@ function Calendar({
           defaultClassNames.dropdowns
         ),
         dropdown_root: cn(
-          "relative rounded-lg border border-input bg-white shadow-[0_4px_14px_rgba(15,23,42,0.03)] has-focus:border-ring has-focus:ring-[3px] has-focus:ring-ring/15",
+          "relative rounded-lg border border-input bg-[var(--surface-panel-strong)] shadow-[var(--shadow-field)] has-focus:border-ring has-focus:ring-[3px] has-focus:ring-ring/15",
           defaultClassNames.dropdown_root
         ),
         dropdown: cn(
@@ -82,7 +82,7 @@ function Calendar({
           defaultClassNames.dropdown
         ),
         caption_label: cn(
-          "select-none text-[1.05rem] font-semibold text-slate-900",
+          "select-none text-[1.05rem] font-semibold text-foreground",
           captionLayout === "label"
             ? ""
             : "rounded-md pl-2 pr-1 flex items-center gap-1 text-sm h-8 [&>svg]:text-muted-foreground [&>svg]:size-3.5",
@@ -91,7 +91,7 @@ function Calendar({
         table: "w-full border-collapse",
         weekdays: cn("flex w-full", defaultClassNames.weekdays),
         weekday: cn(
-          "flex h-10 flex-1 items-center justify-center rounded-md text-sm font-medium text-slate-500 select-none",
+          "flex h-10 flex-1 items-center justify-center rounded-md text-sm font-medium text-muted-foreground select-none",
           defaultClassNames.weekday
         ),
         week: cn("mt-1 flex w-full", defaultClassNames.week),
@@ -108,21 +108,21 @@ function Calendar({
           defaultClassNames.day
         ),
         range_start: cn(
-          "rounded-full rounded-r-none bg-slate-100",
+          "rounded-full rounded-r-none bg-accent",
           defaultClassNames.range_start
         ),
-        range_middle: cn("rounded-none bg-slate-100", defaultClassNames.range_middle),
-        range_end: cn("rounded-full rounded-l-none bg-slate-100", defaultClassNames.range_end),
+        range_middle: cn("rounded-none bg-accent", defaultClassNames.range_middle),
+        range_end: cn("rounded-full rounded-l-none bg-accent", defaultClassNames.range_end),
         today: cn(
-          "font-semibold text-slate-900",
+          "font-semibold text-foreground",
           defaultClassNames.today
         ),
         outside: cn(
-          "text-slate-400 aria-selected:text-slate-400",
+          "text-muted-foreground/60 aria-selected:text-muted-foreground/60",
           defaultClassNames.outside
         ),
         disabled: cn(
-          "text-slate-300 opacity-40",
+          "text-muted-foreground/50 opacity-40",
           defaultClassNames.disabled
         ),
         hidden: cn("invisible", defaultClassNames.hidden),
@@ -205,11 +205,11 @@ function CalendarDayButton({
       data-range-end={modifiers.range_end}
       data-range-middle={modifiers.range_middle}
       className={cn(
-        "flex !h-10 !w-10 items-center justify-center rounded-full !border-0 !bg-transparent p-0 text-sm font-medium leading-none text-slate-900 !shadow-none transition-all hover:!bg-slate-100 hover:!text-slate-900",
-        "data-[selected-single=true]:bg-slate-900 data-[selected-single=true]:text-white data-[selected-single=true]:shadow-[0_12px_24px_rgba(15,23,42,0.24)] data-[selected-single=true]:hover:bg-slate-900 data-[selected-single=true]:hover:text-white",
-        "data-[range-start=true]:bg-slate-900 data-[range-start=true]:text-white data-[range-start=true]:shadow-[0_12px_24px_rgba(15,23,42,0.24)] data-[range-start=true]:hover:bg-slate-900 data-[range-start=true]:hover:text-white",
-        "data-[range-end=true]:bg-slate-900 data-[range-end=true]:text-white data-[range-end=true]:shadow-[0_12px_24px_rgba(15,23,42,0.24)] data-[range-end=true]:hover:bg-slate-900 data-[range-end=true]:hover:text-white",
-        "data-[range-middle=true]:!h-10 data-[range-middle=true]:!w-full data-[range-middle=true]:rounded-none data-[range-middle=true]:!bg-transparent data-[range-middle=true]:text-slate-700 data-[range-middle=true]:!shadow-none data-[range-middle=true]:hover:!bg-transparent data-[range-middle=true]:hover:text-slate-900",
+        "flex !h-10 !w-10 items-center justify-center rounded-full !border-0 !bg-transparent p-0 text-sm font-medium leading-none text-foreground !shadow-none transition-all hover:!bg-accent hover:!text-foreground",
+        "data-[selected-single=true]:bg-primary data-[selected-single=true]:text-primary-foreground data-[selected-single=true]:shadow-[var(--shadow-field)] data-[selected-single=true]:hover:bg-primary data-[selected-single=true]:hover:text-primary-foreground",
+        "data-[range-start=true]:bg-primary data-[range-start=true]:text-primary-foreground data-[range-start=true]:shadow-[var(--shadow-field)] data-[range-start=true]:hover:bg-primary data-[range-start=true]:hover:text-primary-foreground",
+        "data-[range-end=true]:bg-primary data-[range-end=true]:text-primary-foreground data-[range-end=true]:shadow-[var(--shadow-field)] data-[range-end=true]:hover:bg-primary data-[range-end=true]:hover:text-primary-foreground",
+        "data-[range-middle=true]:!h-10 data-[range-middle=true]:!w-full data-[range-middle=true]:rounded-none data-[range-middle=true]:!bg-transparent data-[range-middle=true]:text-foreground data-[range-middle=true]:!shadow-none data-[range-middle=true]:hover:!bg-transparent data-[range-middle=true]:hover:text-foreground",
         "group-data-[focused=true]/day:relative group-data-[focused=true]/day:z-10 group-data-[focused=true]/day:ring-0 [&>span]:text-xs [&>span]:opacity-70",
         defaultClassNames.day,
         className

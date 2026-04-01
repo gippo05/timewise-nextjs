@@ -19,7 +19,7 @@ export default function DashboardShell({
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-transparent text-foreground">
       <div className="flex min-h-screen">
         <SideBar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
 

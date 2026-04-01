@@ -20,7 +20,7 @@ export default function MetricCard({
   className,
 }: MetricCardProps) {
   return (
-    <Card className={cn("gap-0 border-white/70", className)}>
+    <Card className={cn("gap-0", className)}>
       <CardHeader className="flex flex-row items-start justify-between gap-4 pb-0">
         <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
@@ -30,7 +30,7 @@ export default function MetricCard({
         </div>
 
         {Icon ? (
-          <div className="flex size-10 items-center justify-center rounded-2xl border border-border bg-secondary text-foreground">
+          <div className="app-icon-surface flex size-10 items-center justify-center rounded-2xl border text-foreground">
             <Icon className="size-4" />
           </div>
         ) : null}
