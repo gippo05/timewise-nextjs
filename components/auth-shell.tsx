@@ -1,7 +1,6 @@
 import Image from "next/image";
-
 import ThemeToggle from "@/components/theme-toggle";
-import logo from "@/public/TimeWISE logo.png";
+import logo from "@/public/TimeWISE logo.png"
 
 type AuthShellProps = {
   title: string;
@@ -32,9 +31,6 @@ export default function AuthShell({
                 Timewise workspace
               </div>
               <div className="space-y-4">
-                <div className="relative h-10 w-36">
-                  <Image src={logo} alt="Timewise" fill className="object-contain object-left" priority />
-                </div>
                 <div className="space-y-3">
                   <h2 className="max-w-md text-4xl font-semibold tracking-tight text-foreground">
                     Attendance operations with a steadier enterprise feel.
@@ -69,19 +65,14 @@ export default function AuthShell({
               <ThemeToggle />
             </div>
 
-            <div className="space-y-3 xl:hidden">
-              <div className="relative h-9 w-32">
-                <Image src={logo} alt="Timewise" fill className="object-contain object-left" priority />
+            <div className="flex flex-col items-center gap-4 text-center">
+              <div className="relative h-20 w-56 sm:h-24 sm:w-64">
+                <Image src={logo} alt="Timewise" fill className="object-contain" priority sizes="320px" />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
                 <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
               </div>
-            </div>
-
-            <div className="hidden space-y-2 xl:block">
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
-              <p className="text-sm leading-relaxed text-muted-foreground">{description}</p>
             </div>
 
             {children}

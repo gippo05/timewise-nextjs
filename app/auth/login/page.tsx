@@ -44,6 +44,7 @@ export default function LoginPage() {
   }
 
   return (
+
     <AuthShell
       title="Sign in"
       description="Use your work email and password to access the Timewise dashboard."
