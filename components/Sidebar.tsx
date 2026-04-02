@@ -126,7 +126,7 @@ export default function SideBar({
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-[292px] max-w-[calc(100vw-1rem)] flex-col border-r border-sidebar-border bg-sidebar/96 px-4 py-4 backdrop-blur-xl transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:h-screen lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-[292px] max-w-[calc(100vw-1rem)] flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar/96 px-4 py-4 backdrop-blur-xl transition-transform duration-300 lg:sticky lg:top-0 lg:z-20 lg:h-screen lg:translate-x-0",
           mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         )}
       >
