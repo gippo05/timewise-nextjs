@@ -20,11 +20,13 @@ export default function DashboardClient({
   last_name,
   userRole,
   attendance,
+  userId,
 }: {
   first_name: string;
   last_name: string;
   userRole: string;
   attendance: AttendanceRow[];
+  userId?: string | null;
 }) {
   const displayName =
     [first_name, last_name].filter(Boolean).join(" ").trim() || "team member";
@@ -80,7 +82,7 @@ export default function DashboardClient({
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
         <div className="min-w-0">
-          <ClockCard />
+          <ClockCard userId={userId} />
         </div>
 
         <div className="grid min-w-0 gap-6 md:grid-cols-2">

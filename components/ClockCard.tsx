@@ -32,8 +32,8 @@ function formatTime(iso: string | null) {
   });
 }
 
-export default function ClockCard() {
-  const [userId, setUserId] = useState<string | null>(null);
+export default function ClockCard({ userId: userIdProp }: { userId?: string | null }) {
+  const [userId, setUserId] = useState<string | null>(userIdProp ?? null);
   const [active, setActive] = useState<AttendanceRow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isActing, setIsActing] = useState(false);
@@ -90,6 +90,13 @@ export default function ClockCard() {
   useEffect(() => {
     async function loadUser() {
       try {
+        if (userIdProp) {
+          const uid = userIdProp;
+          setUserId(uid);
+          await refreshActiveAttendance(uid);
+          return;
+        }
+
         const {
           data: { user },
           error,
@@ -111,7 +118,7 @@ export default function ClockCard() {
     }
 
     void loadUser();
-  }, []);
+  }, [userIdProp]);
 
   const state: ClockState = useMemo(() => {
     if (!active?.clock_in) return "clocked_out";

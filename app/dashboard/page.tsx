@@ -98,6 +98,7 @@ export default async function DashboardPage() {
       last_name={last_name}
       userRole={role}
       attendance={attendance}
+      userId={user.id}
     />
   );
 }
