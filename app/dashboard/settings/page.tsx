@@ -1,10 +1,13 @@
 import { UserRoundX } from "lucide-react";
 
 import AvatarUploaderCard from "@/components/UploadAvatar";
+import TeamInvitationsSection from "@/components/TeamInvitationsSection";
 import UpdatePassword from "@/components/UpdatePassword";
 import UpdateProfile from "@/components/UpdateProfile";
 import EmptyState from "@/components/empty-state";
+import { getAdminMembership, listInvitesForCompany } from "@/lib/invitations/server";
 import { createClient } from "@/lib/supabase/server";
+import type { InvitationListItem } from "@/src/types/invitation";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -42,16 +45,34 @@ export default async function SettingsPage() {
     [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() ||
     "Team member";
 
+  let canManageInvites = false;
+  let invites: InvitationListItem[] = [];
+
+  try {
+    const adminMembership = await getAdminMembership(supabase, user.id);
+    canManageInvites = Boolean(adminMembership);
+
+    if (adminMembership?.company_id) {
+      invites = await listInvitesForCompany(supabase, adminMembership.company_id);
+    }
+  } catch (error: unknown) {
+    console.error("Settings invite section error:", error);
+  }
+
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
-      <div className="min-w-0">
-        <AvatarUploaderCard userId={user.id} fallbackName={fallbackName} />
+    <div className="space-y-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
+        <div className="min-w-0">
+          <AvatarUploaderCard userId={user.id} fallbackName={fallbackName} />
+        </div>
+
+        <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+          <UpdateProfile userId={user.id} profile={profile} />
+          <UpdatePassword userId={user.id} />
+        </div>
       </div>
 
-      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
-        <UpdateProfile userId={user.id} profile={profile} />
-        <UpdatePassword userId={user.id} />
-      </div>
+      <TeamInvitationsSection canManage={canManageInvites} initialInvites={invites} />
     </div>
   );
 }
