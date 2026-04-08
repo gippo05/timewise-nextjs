@@ -17,77 +17,47 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 type SidebarProps = {
-  mobileOpen?: boolean;
-  onClose?: () => void;
+  pathname?: string | null;
+  profile?: {
+    first_name: string | null;
+    last_name: string | null;
+    role: string | null;
+    avatar_path?: string | null;
+  } | null;
 };
 
 export default function SideBar({
-  mobileOpen = false,
-  onClose,
+  pathname,
+  profile,
 }: SidebarProps) {
   const router = useRouter();
-  const pathname = usePathname();
+  const routePath = usePathname();
   const supabase = React.useMemo(() => createClient(), []);
+  const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
   const [displayName, setDisplayName] = React.useState("Team member");
   const [displayRole, setDisplayRole] = React.useState("employee");
 
   React.useEffect(() => {
-    let cancelled = false;
+    if (!profile) return;
 
-    async function loadProfile() {
-      try {
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError) throw authError;
-        if (!user) return;
-
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("avatar_path, first_name, last_name, role")
-          .eq("id", user.id)
-          .maybeSingle();
-
-        if (profileError) throw profileError;
-        if (cancelled) return;
-
-        const name = [profile?.first_name, profile?.last_name]
-          .filter(Boolean)
-          .join(" ")
-          .trim();
-
-        if (name) {
-          setDisplayName(name);
-        }
-
-        setDisplayRole(profile?.role || "employee");
-
-        if (profile?.avatar_path) {
-          const { data: urlData } = supabase.storage
-            .from("avatars")
-            .getPublicUrl(profile.avatar_path);
-          setAvatarUrl(urlData.publicUrl);
-        } else {
-          setAvatarUrl(null);
-        }
-      } catch (error: unknown) {
-        console.error(error);
-        const message =
-          error instanceof Error ? error.message : "Failed to load profile.";
-        toast.error(message);
-      }
+    const name = [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
+    if (name) {
+      setDisplayName(name);
     }
 
-    void loadProfile();
+    setDisplayRole(profile.role || "employee");
 
-    return () => {
-      cancelled = true;
-    };
-  }, [supabase]);
+    if (profile.avatar_path) {
+      const { data: urlData } = supabase.storage
+        .from("avatars")
+        .getPublicUrl(profile.avatar_path);
+      setAvatarUrl(urlData.publicUrl);
+    } else {
+      setAvatarUrl(null);
+    }
+  }, [profile, supabase]);
 
   const isAdmin = React.useMemo(
     () => displayRole.trim().toLowerCase() === "admin",
@@ -99,6 +69,23 @@ export default function SideBar({
     [isAdmin]
   );
 
+  const currentPath = pathname ?? routePath ?? "";
+
+  const closeSidebar = React.useCallback(() => {
+    setMobileOpen(false);
+  }, []);
+
+  React.useEffect(() => {
+    closeSidebar();
+  }, [closeSidebar, currentPath]);
+
+  React.useEffect(() => {
+    const openSidebar = () => setMobileOpen(true);
+
+    window.addEventListener("timewise:sidebar-open", openSidebar);
+    return () => window.removeEventListener("timewise:sidebar-open", openSidebar);
+  }, []);
+
   async function handleLogout() {
     const { error } = await supabase.auth.signOut();
 
@@ -107,7 +94,7 @@ export default function SideBar({
       return;
     }
 
-    onClose?.();
+    closeSidebar();
     router.push("/auth/login");
     router.refresh();
   }
@@ -117,7 +104,7 @@ export default function SideBar({
       <button
         type="button"
         aria-label="Close navigation"
-        onClick={onClose}
+        onClick={closeSidebar}
         className={cn(
           "fixed inset-0 z-30 bg-[var(--surface-scrim)] backdrop-blur-sm transition-opacity lg:hidden",
           mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
@@ -136,7 +123,7 @@ export default function SideBar({
             variant="ghost"
             size="icon-sm"
             className="lg:hidden"
-            onClick={onClose}
+            onClick={closeSidebar}
           >
             <X className="size-4" />
             <span className="sr-only">Close navigation</span>
@@ -161,7 +148,7 @@ export default function SideBar({
         <ScrollArea className="flex-1">
           <nav className="space-y-2 pr-2">
             {navItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = currentPath === item.href;
               const Icon = item.icon;
 
               return (
@@ -169,7 +156,7 @@ export default function SideBar({
                   key={item.href}
                   href={item.href}
                   prefetch
-                  onClick={() => onClose?.()}
+                  onClick={closeSidebar}
                   className={cn(
                     "group flex w-full min-w-0 items-start gap-3 rounded-2xl border px-3.5 py-3.5 text-left whitespace-normal transition-[background-color,border-color,box-shadow,color]",
                     isActive

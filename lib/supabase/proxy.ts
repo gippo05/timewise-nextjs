@@ -28,7 +28,14 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
-  const PUBLIC_PATHS = ["/auth", "/login", "/forgot-password", "/reset-password", "/auth/callback"];
+  const PUBLIC_PATHS = [
+    "/auth",
+    "/login",
+    "/forgot-password",
+    "/reset-password",
+    "/invite",
+    "/auth/callback",
+  ];
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 

@@ -12,12 +12,20 @@ import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/theme-toggle";
 
 type TopBarProps = {
-  onOpenSidebar: () => void;
+  pathname?: string | null;
 };
 
-export default function TopBar({ onOpenSidebar }: TopBarProps) {
-  const pathname = usePathname();
-  const pageMeta = React.useMemo(() => getDashboardPageMeta(pathname), [pathname]);
+export default function TopBar({ pathname }: TopBarProps) {
+  const routePath = usePathname();
+  const pageMeta = React.useMemo(
+    () => getDashboardPageMeta(pathname ?? routePath ?? "/dashboard"),
+    [pathname, routePath]
+  );
+
+  const handleOpenSidebar = React.useCallback(() => {
+    window.dispatchEvent(new Event("timewise:sidebar-open"));
+  }, []);
+
   const formattedDate = React.useMemo(
     () =>
       new Intl.DateTimeFormat("en-US", {
@@ -37,7 +45,7 @@ export default function TopBar({ onOpenSidebar }: TopBarProps) {
             variant="outline"
             size="icon-sm"
             className="mt-0.5 lg:hidden"
-            onClick={onOpenSidebar}
+            onClick={handleOpenSidebar}
           >
             <PanelLeft className="size-4" />
             <span className="sr-only">Open navigation</span>

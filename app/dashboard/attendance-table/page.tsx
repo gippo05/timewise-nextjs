@@ -85,7 +85,8 @@ export default async function AttendanceTablePage() {
       )
     `
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(200);
 
   if (error) {
     console.error("Attendance fetch error:", error);
