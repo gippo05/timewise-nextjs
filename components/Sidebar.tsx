@@ -232,7 +232,7 @@ export default function SideBar({
           </Button>
 
           <p className="mt-2 px-1 text-[11px] text-muted-foreground">
-            Timewise v0.1
+            Timewise v0.10
           </p>
         </div>
       </aside>
