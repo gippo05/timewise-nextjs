@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  CalendarRange,
   ChartColumnIncreasing,
   ClipboardCheck,
   Clock3,
@@ -35,6 +36,12 @@ export const dashboardNavItems: DashboardNavItem[] = [
     adminOnly: true,
   },
   {
+    href: "/dashboard/schedules",
+    label: "Schedules",
+    description: "Manage shift templates and review assigned schedules.",
+    icon: CalendarRange,
+  },
+  {
     href: "/dashboard/request-leave",
     label: "Leave Requests",
     description: "Submit time off and monitor approval progress.",
@@ -56,6 +63,11 @@ export const dashboardNavItems: DashboardNavItem[] = [
 ];
 
 const dashboardPageMeta: DashboardPageMeta[] = [
+  {
+    matcher: (pathname) => pathname === "/dashboard/schedules",
+    title: "Schedules",
+    description: "Assign daily shifts, manage reusable templates, and keep the company schedule visible by date range.",
+  },
   {
     matcher: (pathname) => pathname === "/dashboard/request-leave/admin",
     title: "Leave Approvals",

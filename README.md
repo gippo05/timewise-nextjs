@@ -135,3 +135,28 @@ Audit logs
 Gian (Gipps)
 Full-Stack Developer
 Building practical, scalable SaaS applications with modern tools
+
+## Phase 1 Scheduling Notes
+
+Schema added:
+- `public.shift_templates`
+- `public.employee_schedule_assignments`
+
+App additions:
+- `app/dashboard/schedules/page.tsx`
+- `app/dashboard/schedules/actions.ts`
+- `components/SchedulesClient.tsx`
+- `lib/scheduling/server.ts`
+- `src/types/scheduling.ts`
+
+How assignment upsert works:
+- The scheduling action expands an inclusive date range into one row per employee per day.
+- Each row copies time, break, grace, and overnight values from the selected template at write time.
+- Inserts use `upsert` on `(company_id, user_id, work_date)`, so saving again overwrites the existing row for that employee/date.
+
+What is intentionally deferred:
+- Recurring schedules
+- Payroll logic
+- Attendance edits tied to schedules
+- Planner drag-and-drop UI
+- Batch history or audit tables beyond the assignment rows themselves
