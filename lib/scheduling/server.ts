@@ -88,9 +88,21 @@ type AssignmentRowInput = {
   created_by: string;
 };
 
+type ComparableScheduleSegment = Pick<
+  AssignmentRowInput,
+  "company_id" | "user_id" | "work_date" | "start_time" | "end_time" | "is_rest_day" | "is_overnight"
+> & {
+  id?: string;
+};
+
 const DATE_INPUT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export const COMPANY_SCHEDULE_PAGE_SIZE = 10;
 const SCHEDULABLE_COMPANY_ROLES = ["admin", "employee"] as const;
+export const SCHEDULE_OVERLAP_ERROR =
+  "This schedule overlaps with an existing shift on the same day.";
+export const SCHEDULE_DUPLICATE_ERROR = "This exact schedule already exists.";
+export const SCHEDULE_MULTI_SEGMENT_RULE_ERROR =
+  "Multiple schedule segments per day are allowed only when times do not overlap.";
 
 function padDatePart(value: number) {
   return String(value).padStart(2, "0");
@@ -144,6 +156,144 @@ function mapScheduleAssignmentRow(row: ScheduleAssignmentRow): ScheduleAssignmen
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
+}
+
+function buildAssignmentDayKey(input: Pick<ComparableScheduleSegment, "company_id" | "user_id" | "work_date">) {
+  return `${input.company_id}:${input.user_id}:${input.work_date}`;
+}
+
+function parseTimeToSeconds(value: string) {
+  const [rawHours = "0", rawMinutes = "0", rawSeconds = "0"] = value.split(":");
+  const hours = Number(rawHours);
+  const minutes = Number(rawMinutes);
+  const seconds = Number(rawSeconds);
+
+  if ([hours, minutes, seconds].some((part) => Number.isNaN(part))) {
+    return 0;
+  }
+
+  return hours * 60 * 60 + minutes * 60 + seconds;
+}
+
+function getScheduleSegmentBounds(segment: Pick<
+  ComparableScheduleSegment,
+  "start_time" | "end_time" | "is_rest_day" | "is_overnight"
+>) {
+  if (segment.is_rest_day) {
+    return {
+      start: 0,
+      end: 24 * 60 * 60,
+    };
+  }
+
+  const start = parseTimeToSeconds(segment.start_time);
+  let end = parseTimeToSeconds(segment.end_time);
+
+  if (segment.is_overnight || end < start) {
+    end += 24 * 60 * 60;
+  }
+
+  return {
+    start,
+    end,
+  };
+}
+
+export function doScheduleSegmentsOverlap(
+  left: Pick<ComparableScheduleSegment, "start_time" | "end_time" | "is_rest_day" | "is_overnight">,
+  right: Pick<ComparableScheduleSegment, "start_time" | "end_time" | "is_rest_day" | "is_overnight">
+) {
+  const leftBounds = getScheduleSegmentBounds(left);
+  const rightBounds = getScheduleSegmentBounds(right);
+
+  return leftBounds.start < rightBounds.end && leftBounds.end > rightBounds.start;
+}
+
+function isExactScheduleSegmentMatch(
+  left: Pick<ComparableScheduleSegment, "company_id" | "user_id" | "work_date" | "start_time" | "end_time">,
+  right: Pick<ComparableScheduleSegment, "company_id" | "user_id" | "work_date" | "start_time" | "end_time">
+) {
+  return (
+    left.company_id === right.company_id &&
+    left.user_id === right.user_id &&
+    left.work_date === right.work_date &&
+    left.start_time === right.start_time &&
+    left.end_time === right.end_time
+  );
+}
+
+export class ScheduleAssignmentValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ScheduleAssignmentValidationError";
+  }
+}
+
+export async function assertScheduleAssignmentRowsInsertable(
+  supabase: SupabaseClient,
+  rows: AssignmentRowInput[]
+) {
+  if (rows.length === 0) {
+    return;
+  }
+
+  const companyId = rows[0]?.company_id;
+  const userIds = Array.from(new Set(rows.map((row) => row.user_id)));
+  const workDates = Array.from(new Set(rows.map((row) => row.work_date)));
+  const { data, error } = await supabase
+    .from("employee_schedule_assignments")
+    .select("id, company_id, user_id, work_date, start_time, end_time, is_rest_day, is_overnight")
+    .eq("company_id", companyId)
+    .in("user_id", userIds)
+    .in("work_date", workDates)
+    .order("work_date", { ascending: true })
+    .order("user_id", { ascending: true })
+    .order("start_time", { ascending: true })
+    .order("end_time", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  const comparableRowsByDay = new Map<string, ComparableScheduleSegment[]>();
+
+  for (const existingSegment of (data ?? []) as ComparableScheduleSegment[]) {
+    const key = buildAssignmentDayKey(existingSegment);
+    const currentSegments = comparableRowsByDay.get(key) ?? [];
+    currentSegments.push(existingSegment);
+    comparableRowsByDay.set(key, currentSegments);
+  }
+
+  for (const row of rows) {
+    const key = buildAssignmentDayKey(row);
+    const currentSegments = comparableRowsByDay.get(key) ?? [];
+
+    if (currentSegments.some((segment) => isExactScheduleSegmentMatch(segment, row))) {
+      throw new ScheduleAssignmentValidationError(SCHEDULE_DUPLICATE_ERROR);
+    }
+
+    if (currentSegments.some((segment) => doScheduleSegmentsOverlap(segment, row))) {
+      throw new ScheduleAssignmentValidationError(
+        `${SCHEDULE_OVERLAP_ERROR} ${SCHEDULE_MULTI_SEGMENT_RULE_ERROR}`
+      );
+    }
+
+    currentSegments.push(row);
+    comparableRowsByDay.set(key, currentSegments);
+  }
+}
+
+export async function insertScheduleAssignmentRows(
+  supabase: SupabaseClient,
+  rows: AssignmentRowInput[]
+) {
+  await assertScheduleAssignmentRowsInsertable(supabase, rows);
+
+  const { error } = await supabase.from("employee_schedule_assignments").insert(rows);
+
+  if (error) {
+    throw error;
+  }
 }
 
 function getMembershipProfile(row: ScheduleMembershipRow) {
@@ -362,6 +512,8 @@ export async function listScheduleAssignmentsForUserRange(
     .gte("work_date", range.from)
     .lte("work_date", range.to)
     .order("work_date", { ascending: true })
+    .order("start_time", { ascending: true })
+    .order("end_time", { ascending: true })
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -391,6 +543,8 @@ export async function listCompanyScheduleAssignmentsPage(
     .lte("work_date", range.to)
     .order("work_date", { ascending: true })
     .order("user_id", { ascending: true })
+    .order("start_time", { ascending: true })
+    .order("end_time", { ascending: true })
     .order("created_at", { ascending: true })
     .range(fromIndex, toIndex);
 

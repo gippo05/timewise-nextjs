@@ -18,6 +18,7 @@ import {
   createShiftTemplateAction,
   updateShiftTemplateAction,
 } from "@/app/dashboard/schedules/actions";
+import { cn } from "@/lib/utils";
 import PageHeader from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,16 @@ type SchedulesClientProps = {
   companySchedulePageSize: number;
   companyScheduleHasNextPage: boolean;
   companyScheduleHasPreviousPage: boolean;
+};
+
+type AssignmentListItem = ScheduleAssignment | ScheduleAssignmentWithAssignee;
+
+type AssignmentGroup = {
+  key: string;
+  user_id: string;
+  work_date: string;
+  assignee: string | null;
+  assignments: AssignmentListItem[];
 };
 
 function toTimeInputValue(value: string) {
@@ -205,11 +216,59 @@ function assigneeLabel(assignment: ScheduleAssignment | ScheduleAssignmentWithAs
   return `Former member (${assignment.user_id.slice(0, 8)})`;
 }
 
+function buildAssignmentGroups(assignments: AssignmentListItem[]) {
+  const groups = new Map<string, AssignmentGroup>();
+
+  for (const assignment of assignments) {
+    const key = `${assignment.user_id}:${assignment.work_date}`;
+    const existingGroup = groups.get(key);
+
+    if (existingGroup) {
+      existingGroup.assignee ??= assigneeLabel(assignment);
+      existingGroup.assignments.push(assignment);
+      continue;
+    }
+
+    groups.set(key, {
+      key,
+      user_id: assignment.user_id,
+      work_date: assignment.work_date,
+      assignee: assigneeLabel(assignment),
+      assignments: [assignment],
+    });
+  }
+
+  return Array.from(groups.values());
+}
+
+function AssignmentCellStack({
+  assignments,
+  renderItem,
+}: {
+  assignments: AssignmentListItem[];
+  renderItem: (assignment: AssignmentListItem) => React.ReactNode;
+}) {
+  return (
+    <div className="space-y-3">
+      {assignments.map((assignment, index) => (
+        <div
+          key={assignment.id}
+          className={cn(
+            index > 0 && "border-t border-[color:var(--surface-border-strong)] pt-3"
+          )}
+        >
+          {renderItem(assignment)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AssignmentRows({
   assignments,
   showAssignee,
 }: {
-  assignments: Array<ScheduleAssignment | ScheduleAssignmentWithAssignee>;
+  assignments: AssignmentListItem[];
   showAssignee: boolean;
 }) {
   if (assignments.length === 0) {
@@ -217,11 +276,13 @@ function AssignmentRows({
       <div className="app-surface-subtle rounded-[20px] border border-dashed px-6 py-10 text-center">
         <p className="text-base font-semibold text-foreground">No schedules in this range</p>
         <p className="mt-2 text-sm text-muted-foreground">
-          Assigned schedule rows will appear here once they exist.
+          Assigned schedule segments will appear here once they exist.
         </p>
       </div>
     );
   }
+
+  const groupedAssignments = buildAssignmentGroups(assignments);
 
   return (
     <div className="app-surface-strong overflow-hidden rounded-[20px] border">
@@ -255,45 +316,71 @@ function AssignmentRows({
             </tr>
           </thead>
           <tbody className="divide-y divide-border text-sm text-foreground">
-            {assignments.map((assignment) => {
-              const assignee = assigneeLabel(assignment);
+            {groupedAssignments.map((group) => {
+              const hasMultipleSegments = group.assignments.length > 1;
 
               return (
-                <tr key={assignment.id} className="app-row-hover align-top">
+                <tr key={group.key} className="app-row-hover align-top">
                   <td className="px-4 py-3">
-                    <div className="space-y-1">
-                      <p className="font-semibold">{formatDateLabel(assignment.work_date)}</p>
-                      {assignment.is_overnight ? (
-                        <Badge variant="warning" className="w-fit">
-                          Overnight
+                    <div className="space-y-2">
+                      <p className="font-semibold">{formatDateLabel(group.work_date)}</p>
+                      {hasMultipleSegments ? (
+                        <Badge variant="outline" className="w-fit">
+                          {group.assignments.length} segments
                         </Badge>
                       ) : null}
                     </div>
                   </td>
-                  {showAssignee ? (
-                    <td className="px-4 py-3 font-medium">{assignee}</td>
-                  ) : null}
+                  {showAssignee ? <td className="px-4 py-3 font-medium">{group.assignee}</td> : null}
                   <td className="px-4 py-3">
-                    <div className="space-y-1">
-                      <p className="font-medium">{scheduleLabel(assignment)}</p>
-                      {assignment.is_rest_day ? (
-                        <Badge variant="neutral" className="w-fit">
-                          No shift
-                        </Badge>
-                      ) : null}
-                    </div>
+                    <AssignmentCellStack
+                      assignments={group.assignments}
+                      renderItem={(assignment) => (
+                        <div className="space-y-2">
+                          <p className="font-medium">{scheduleLabel(assignment)}</p>
+                          {assignment.is_rest_day || assignment.is_overnight ? (
+                            <div className="flex flex-wrap gap-2">
+                              {assignment.is_rest_day ? (
+                                <Badge variant="neutral" className="w-fit">
+                                  No shift
+                                </Badge>
+                              ) : null}
+                              {assignment.is_overnight ? (
+                                <Badge variant="warning" className="w-fit">
+                                  Overnight
+                                </Badge>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    />
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {renderBreakSummary(assignment)}
+                    <AssignmentCellStack
+                      assignments={group.assignments}
+                      renderItem={(assignment) => renderBreakSummary(assignment)}
+                    />
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {assignment.grace_minutes} min
+                    <AssignmentCellStack
+                      assignments={group.assignments}
+                      renderItem={(assignment) => `${assignment.grace_minutes} min`}
+                    />
                   </td>
                   <td className="px-4 py-3">
-                    <Badge variant="outline">{sourceLabel(assignment.source)}</Badge>
+                    <AssignmentCellStack
+                      assignments={group.assignments}
+                      renderItem={(assignment) => (
+                        <Badge variant="outline">{sourceLabel(assignment.source)}</Badge>
+                      )}
+                    />
                   </td>
                   <td className="px-4 py-3 text-muted-foreground">
-                    {assignment.notes ?? "No notes"}
+                    <AssignmentCellStack
+                      assignments={group.assignments}
+                      renderItem={(assignment) => assignment.notes ?? "No notes"}
+                    />
                   </td>
                 </tr>
               );
@@ -598,8 +685,8 @@ export default function SchedulesClient({
 
       toast.success(
         result.assignmentCount === 1
-          ? "1 schedule row saved."
-          : `${result.assignmentCount ?? 0} schedule rows saved.`
+          ? "1 schedule segment saved."
+          : `${result.assignmentCount ?? 0} schedule segments saved.`
       );
       router.refresh();
     });
@@ -612,7 +699,7 @@ export default function SchedulesClient({
         title={isAdmin ? "Schedules and templates" : "My schedule"}
         description={
           isAdmin
-            ? "Create reusable shifts, assign schedules by day or date range, and review the company schedule without recurring logic."
+            ? "Create reusable shifts, assign non-overlapping schedule segments by day or date range, and review the company schedule without recurring logic."
             : "Review your assigned schedules for the selected date range."
         }
       />
@@ -647,9 +734,9 @@ export default function SchedulesClient({
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Badge variant="outline">{countDaysInRange(range)} days loaded</Badge>
             {isAdmin ? (
-              <Badge variant="outline">{companyAssignments.length} rows on this page</Badge>
+              <Badge variant="outline">{companyAssignments.length} segments on this page</Badge>
             ) : (
-              <Badge variant="outline">{employeeAssignments.length} personal assignments</Badge>
+              <Badge variant="outline">{employeeAssignments.length} personal segments</Badge>
             )}
           </div>
         </CardContent>
@@ -805,8 +892,8 @@ export default function SchedulesClient({
                 <CardTitle>Assign schedules</CardTitle>
               </div>
               <CardDescription>
-                Select one or more company members, choose one day or a date range, then save with upsert
-                overwrite behavior.
+                Select one or more company members, choose one day or a date range, then save new
+                non-overlapping schedule segments without replacing other same-day shifts.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-6">
@@ -987,7 +1074,7 @@ export default function SchedulesClient({
                   <Badge variant="outline">{selectedAssigneeCount} assignees</Badge>
                   <Badge variant="outline">{rangeDayCount} days</Badge>
                   <Badge variant="outline">
-                    {selectedAssigneeCount * rangeDayCount} rows to upsert
+                    {selectedAssigneeCount * rangeDayCount} segments to add
                   </Badge>
                   {assignmentForm.isRestDay ? (
                     <Badge variant="neutral">Rest day assignment</Badge>
@@ -1024,8 +1111,8 @@ export default function SchedulesClient({
           </div>
           <CardDescription>
             {isAdmin
-              ? "Daily assignment rows for the selected company range."
-              : "Only confirmed assignment rows are listed. Dates with no schedule stay empty."}
+              ? "Assignment segments for the selected company range, grouped by assignee and date."
+              : "Confirmed schedule segments are grouped by date. Dates with no schedule stay empty."}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
@@ -1038,8 +1125,8 @@ export default function SchedulesClient({
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
                 {companyAssignments.length > 0
-                  ? `Showing ${companySchedulePageStart}-${companySchedulePageEnd} with a maximum of ${companySchedulePageSize} rows per page`
-                  : `No rows on page ${companySchedulePage}.`}
+                  ? `Showing ${companySchedulePageStart}-${companySchedulePageEnd} with a maximum of ${companySchedulePageSize} segments per page`
+                  : `No segments on page ${companySchedulePage}.`}
               </p>
 
               <div className="flex items-center gap-2">

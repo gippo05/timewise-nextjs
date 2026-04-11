@@ -149,10 +149,10 @@ App additions:
 - `lib/scheduling/server.ts`
 - `src/types/scheduling.ts`
 
-How assignment upsert works:
-- The scheduling action expands an inclusive date range into one row per employee per day.
+How assignment writes work:
+- The scheduling action expands an inclusive date range into one row per employee per day and per selected shift segment.
 - Each row copies time, break, grace, and overnight values from the selected template at write time.
-- Inserts use `upsert` on `(company_id, user_id, work_date)`, so saving again overwrites the existing row for that employee/date.
+- Inserts allow multiple same-day segments for the same employee when the exact segment is new and the time range does not overlap an existing segment.
 
 What is intentionally deferred:
 - Recurring schedules

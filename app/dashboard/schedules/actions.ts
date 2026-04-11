@@ -5,9 +5,12 @@ import { z } from "zod";
 
 import { getAdminMembership } from "@/lib/invitations/server";
 import {
+  SCHEDULE_DUPLICATE_ERROR,
+  ScheduleAssignmentValidationError,
   assertSchedulableCompanyMembers,
   buildScheduleAssignmentRows,
   getShiftTemplateForCompany,
+  insertScheduleAssignmentRows,
 } from "@/lib/scheduling/server";
 import { createClient } from "@/lib/supabase/server";
 import type { ShiftTemplate } from "@/src/types/scheduling";
@@ -102,6 +105,10 @@ const assignSchedulesSchema = z
 function normalizeNotes(notes: string | undefined) {
   const trimmed = notes?.trim() ?? "";
   return trimmed ? trimmed : null;
+}
+
+function isPostgresError(error: unknown): error is { code?: string } {
+  return typeof error === "object" && error !== null && "code" in error;
 }
 
 async function requireAdminCompanyContext() {
@@ -296,19 +303,7 @@ export async function assignSchedulesAction(
       template,
     });
 
-    const { error } = await context.supabase
-      .from("employee_schedule_assignments")
-      .upsert(rows, {
-        onConflict: "company_id,user_id,work_date",
-      });
-
-    if (error) {
-      console.error("Assign schedules error:", error);
-      return {
-        ok: false,
-        error: "Unable to save the schedule assignments right now.",
-      };
-    }
+    await insertScheduleAssignmentRows(context.supabase, rows);
 
     revalidatePath("/dashboard/schedules");
     return {
@@ -316,6 +311,20 @@ export async function assignSchedulesAction(
       assignmentCount: rows.length,
     };
   } catch (error) {
+    if (error instanceof ScheduleAssignmentValidationError) {
+      return {
+        ok: false,
+        error: error.message,
+      };
+    }
+
+    if (isPostgresError(error) && error.code === "23505") {
+      return {
+        ok: false,
+        error: SCHEDULE_DUPLICATE_ERROR,
+      };
+    }
+
     console.error("Assign schedules action error:", error);
     return {
       ok: false,
