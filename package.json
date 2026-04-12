@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:scheduling": "node --test --experimental-strip-types --experimental-test-isolation=none tests/scheduling-utils.test.mts",
+    "test:e2e": "node ./node_modules/@playwright/test/cli.js test"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",

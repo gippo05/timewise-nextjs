@@ -2,6 +2,13 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import {
+  buildScheduleAssignmentDayKey,
+  doScheduleSegmentsOverlap,
+  isExactScheduleSegmentMatch,
+  paginateScheduleAssignmentGroups,
+} from "./utils";
+import type { ComparableScheduleSegment } from "./utils";
 import type {
   PaginatedCompanyScheduleAssignments,
   ScheduleAssignment,
@@ -88,13 +95,6 @@ type AssignmentRowInput = {
   created_by: string;
 };
 
-type ComparableScheduleSegment = Pick<
-  AssignmentRowInput,
-  "company_id" | "user_id" | "work_date" | "start_time" | "end_time" | "is_rest_day" | "is_overnight"
-> & {
-  id?: string;
-};
-
 const DATE_INPUT_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export const COMPANY_SCHEDULE_PAGE_SIZE = 10;
 const SCHEDULABLE_COMPANY_ROLES = ["admin", "employee"] as const;
@@ -158,70 +158,6 @@ function mapScheduleAssignmentRow(row: ScheduleAssignmentRow): ScheduleAssignmen
   };
 }
 
-function buildAssignmentDayKey(input: Pick<ComparableScheduleSegment, "company_id" | "user_id" | "work_date">) {
-  return `${input.company_id}:${input.user_id}:${input.work_date}`;
-}
-
-function parseTimeToSeconds(value: string) {
-  const [rawHours = "0", rawMinutes = "0", rawSeconds = "0"] = value.split(":");
-  const hours = Number(rawHours);
-  const minutes = Number(rawMinutes);
-  const seconds = Number(rawSeconds);
-
-  if ([hours, minutes, seconds].some((part) => Number.isNaN(part))) {
-    return 0;
-  }
-
-  return hours * 60 * 60 + minutes * 60 + seconds;
-}
-
-function getScheduleSegmentBounds(segment: Pick<
-  ComparableScheduleSegment,
-  "start_time" | "end_time" | "is_rest_day" | "is_overnight"
->) {
-  if (segment.is_rest_day) {
-    return {
-      start: 0,
-      end: 24 * 60 * 60,
-    };
-  }
-
-  const start = parseTimeToSeconds(segment.start_time);
-  let end = parseTimeToSeconds(segment.end_time);
-
-  if (segment.is_overnight || end < start) {
-    end += 24 * 60 * 60;
-  }
-
-  return {
-    start,
-    end,
-  };
-}
-
-export function doScheduleSegmentsOverlap(
-  left: Pick<ComparableScheduleSegment, "start_time" | "end_time" | "is_rest_day" | "is_overnight">,
-  right: Pick<ComparableScheduleSegment, "start_time" | "end_time" | "is_rest_day" | "is_overnight">
-) {
-  const leftBounds = getScheduleSegmentBounds(left);
-  const rightBounds = getScheduleSegmentBounds(right);
-
-  return leftBounds.start < rightBounds.end && leftBounds.end > rightBounds.start;
-}
-
-function isExactScheduleSegmentMatch(
-  left: Pick<ComparableScheduleSegment, "company_id" | "user_id" | "work_date" | "start_time" | "end_time">,
-  right: Pick<ComparableScheduleSegment, "company_id" | "user_id" | "work_date" | "start_time" | "end_time">
-) {
-  return (
-    left.company_id === right.company_id &&
-    left.user_id === right.user_id &&
-    left.work_date === right.work_date &&
-    left.start_time === right.start_time &&
-    left.end_time === right.end_time
-  );
-}
-
 export class ScheduleAssignmentValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -258,14 +194,14 @@ export async function assertScheduleAssignmentRowsInsertable(
   const comparableRowsByDay = new Map<string, ComparableScheduleSegment[]>();
 
   for (const existingSegment of (data ?? []) as ComparableScheduleSegment[]) {
-    const key = buildAssignmentDayKey(existingSegment);
+    const key = buildScheduleAssignmentDayKey(existingSegment);
     const currentSegments = comparableRowsByDay.get(key) ?? [];
     currentSegments.push(existingSegment);
     comparableRowsByDay.set(key, currentSegments);
   }
 
   for (const row of rows) {
-    const key = buildAssignmentDayKey(row);
+    const key = buildScheduleAssignmentDayKey(row);
     const currentSegments = comparableRowsByDay.get(key) ?? [];
 
     if (currentSegments.some((segment) => isExactScheduleSegmentMatch(segment, row))) {
@@ -530,8 +466,6 @@ export async function listCompanyScheduleAssignmentsPage(
   page: number
 ): Promise<PaginatedCompanyScheduleAssignments> {
   const safePage = Number.isInteger(page) && page > 0 ? page : 1;
-  const fromIndex = (safePage - 1) * COMPANY_SCHEDULE_PAGE_SIZE;
-  const toIndex = fromIndex + COMPANY_SCHEDULE_PAGE_SIZE;
 
   const { data, error } = await supabase
     .from("employee_schedule_assignments")
@@ -545,21 +479,25 @@ export async function listCompanyScheduleAssignmentsPage(
     .order("user_id", { ascending: true })
     .order("start_time", { ascending: true })
     .order("end_time", { ascending: true })
-    .order("created_at", { ascending: true })
-    .range(fromIndex, toIndex);
+    .order("created_at", { ascending: true });
 
   if (error) {
     throw error;
   }
 
   const mappedAssignments = ((data ?? []) as ScheduleAssignmentRow[]).map(mapScheduleAssignmentRow);
-
-  return {
-    assignments: mappedAssignments.slice(0, COMPANY_SCHEDULE_PAGE_SIZE),
+  const paginatedAssignments = paginateScheduleAssignmentGroups({
+    assignments: mappedAssignments,
     page: safePage,
     pageSize: COMPANY_SCHEDULE_PAGE_SIZE,
-    hasNextPage: mappedAssignments.length > COMPANY_SCHEDULE_PAGE_SIZE,
-    hasPreviousPage: safePage > 1,
+  });
+
+  return {
+    assignments: paginatedAssignments.assignments,
+    page: paginatedAssignments.page,
+    pageSize: paginatedAssignments.pageSize,
+    hasNextPage: paginatedAssignments.hasNextPage,
+    hasPreviousPage: paginatedAssignments.hasPreviousPage,
   };
 }
 

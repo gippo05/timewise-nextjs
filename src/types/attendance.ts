@@ -16,5 +16,6 @@ export type AttendanceRow = {
   end_second_break: string | null;
   clock_out: string | null;
   late_minutes: number | null;
+  schedule_assignment_id?: string | null;
   profiles: AttendanceProfile[];
 };

@@ -18,6 +18,7 @@ import {
   createShiftTemplateAction,
   updateShiftTemplateAction,
 } from "@/app/dashboard/schedules/actions";
+import { groupScheduleAssignmentsByUserDate } from "@/lib/scheduling/utils";
 import { cn } from "@/lib/utils";
 import PageHeader from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
@@ -81,14 +82,6 @@ type SchedulesClientProps = {
 };
 
 type AssignmentListItem = ScheduleAssignment | ScheduleAssignmentWithAssignee;
-
-type AssignmentGroup = {
-  key: string;
-  user_id: string;
-  work_date: string;
-  assignee: string | null;
-  assignments: AssignmentListItem[];
-};
 
 function toTimeInputValue(value: string) {
   return value.slice(0, 5);
@@ -216,31 +209,6 @@ function assigneeLabel(assignment: ScheduleAssignment | ScheduleAssignmentWithAs
   return `Former member (${assignment.user_id.slice(0, 8)})`;
 }
 
-function buildAssignmentGroups(assignments: AssignmentListItem[]) {
-  const groups = new Map<string, AssignmentGroup>();
-
-  for (const assignment of assignments) {
-    const key = `${assignment.user_id}:${assignment.work_date}`;
-    const existingGroup = groups.get(key);
-
-    if (existingGroup) {
-      existingGroup.assignee ??= assigneeLabel(assignment);
-      existingGroup.assignments.push(assignment);
-      continue;
-    }
-
-    groups.set(key, {
-      key,
-      user_id: assignment.user_id,
-      work_date: assignment.work_date,
-      assignee: assigneeLabel(assignment),
-      assignments: [assignment],
-    });
-  }
-
-  return Array.from(groups.values());
-}
-
 function AssignmentCellStack({
   assignments,
   renderItem,
@@ -282,7 +250,7 @@ function AssignmentRows({
     );
   }
 
-  const groupedAssignments = buildAssignmentGroups(assignments);
+  const groupedAssignments = groupScheduleAssignmentsByUserDate(assignments);
 
   return (
     <div className="app-surface-strong overflow-hidden rounded-[20px] border">
@@ -318,6 +286,7 @@ function AssignmentRows({
           <tbody className="divide-y divide-border text-sm text-foreground">
             {groupedAssignments.map((group) => {
               const hasMultipleSegments = group.assignments.length > 1;
+              const primaryAssignment = group.assignments[0];
 
               return (
                 <tr key={group.key} className="app-row-hover align-top">
@@ -331,7 +300,11 @@ function AssignmentRows({
                       ) : null}
                     </div>
                   </td>
-                  {showAssignee ? <td className="px-4 py-3 font-medium">{group.assignee}</td> : null}
+                  {showAssignee ? (
+                    <td className="px-4 py-3 font-medium">
+                      {primaryAssignment ? assigneeLabel(primaryAssignment) : null}
+                    </td>
+                  ) : null}
                   <td className="px-4 py-3">
                     <AssignmentCellStack
                       assignments={group.assignments}
@@ -543,6 +516,7 @@ export default function SchedulesClient({
   );
 
   const assignments = isAdmin ? companyAssignments : employeeAssignments;
+  const companyAssignmentGroups = groupScheduleAssignmentsByUserDate(companyAssignments);
   const activeTemplates = templates.filter((template) => template.is_active);
   const selectedAssigneeCount = assignmentForm.employeeIds.length;
   const rangeDayCount = countDaysInRange({
@@ -550,7 +524,7 @@ export default function SchedulesClient({
     to: assignmentForm.endDate,
   });
   const companySchedulePageStart = (companySchedulePage - 1) * companySchedulePageSize + 1;
-  const companySchedulePageEnd = companySchedulePageStart + companyAssignments.length - 1;
+  const companySchedulePageEnd = companySchedulePageStart + companyAssignmentGroups.length - 1;
 
   function updateEditTemplateForm(value: React.SetStateAction<TemplateFormState>) {
     setEditTemplateForm((current) => {
@@ -734,7 +708,10 @@ export default function SchedulesClient({
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <Badge variant="outline">{countDaysInRange(range)} days loaded</Badge>
             {isAdmin ? (
-              <Badge variant="outline">{companyAssignments.length} segments on this page</Badge>
+              <>
+                <Badge variant="outline">{companyAssignmentGroups.length} groups on this page</Badge>
+                <Badge variant="outline">{companyAssignments.length} segments on this page</Badge>
+              </>
             ) : (
               <Badge variant="outline">{employeeAssignments.length} personal segments</Badge>
             )}
@@ -1125,8 +1102,8 @@ export default function SchedulesClient({
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
                 {companyAssignments.length > 0
-                  ? `Showing ${companySchedulePageStart}-${companySchedulePageEnd} with a maximum of ${companySchedulePageSize} segments per page`
-                  : `No segments on page ${companySchedulePage}.`}
+                  ? `Showing ${companySchedulePageStart}-${companySchedulePageEnd} with a maximum of ${companySchedulePageSize} assignee-date groups per page`
+                  : `No groups on page ${companySchedulePage}.`}
               </p>
 
               <div className="flex items-center gap-2">

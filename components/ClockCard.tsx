@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { computeLateMinutes } from "@/lib/attendance";
+import {
+  getRelevantWorkDatesForClockIn,
+  resolveLateMinutesForClockIn,
+  type AttendanceScheduleAssignment,
+} from "@/lib/attendance";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +24,7 @@ type AttendanceRow = {
   end_second_break: string | null;
   clock_out: string | null;
   late_minutes: number | null;
+  schedule_assignment_id?: string | null;
 };
 
 type ClockState = "clocked_out" | "working" | "on_break";
@@ -68,7 +73,7 @@ export default function ClockCard({ userId: userIdProp }: { userId?: string | nu
     const { data, error } = await supabase
       .from("attendance")
       .select(
-        "id, clock_in, break, end_break, second_break, end_second_break, clock_out, late_minutes"
+        "id, clock_in, break, end_break, second_break, end_second_break, clock_out, late_minutes, schedule_assignment_id"
       )
       .eq("user_id", uid)
       .is("clock_out", null)
@@ -178,12 +183,19 @@ export default function ClockCard({ userId: userIdProp }: { userId?: string | nu
       }
 
       const nowISO = new Date().toISOString();
+      const workDates = getRelevantWorkDatesForClockIn(nowISO, "local");
+      const [profileResponse, scheduleResponse] = await Promise.all([
+        supabase.from("profiles").select("expected_start_time, grace_minutes").eq("id", userId).maybeSingle(),
+        supabase
+          .from("employee_schedule_assignments")
+          .select("id, work_date, start_time, end_time, grace_minutes, is_overnight, is_rest_day")
+          .eq("user_id", userId)
+          .in("work_date", workDates)
+          .order("work_date", { ascending: true })
+          .order("start_time", { ascending: true }),
+      ]);
 
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("expected_start_time, grace_minutes")
-        .eq("id", userId)
-        .maybeSingle();
+      const { data: profile, error: profileError } = profileResponse;
 
       if (profileError) {
         console.error("Failed to fetch profile schedule fields:", {
@@ -194,10 +206,17 @@ export default function ClockCard({ userId: userIdProp }: { userId?: string | nu
         });
       }
 
-      const lateMinutes = computeLateMinutes({
+      if (scheduleResponse.error) {
+        console.error("Failed to fetch schedule assignments for clock-in:", scheduleResponse.error);
+      }
+
+      const { scheduleAssignment, lateMinutes } = resolveLateMinutesForClockIn({
         clockInISO: nowISO,
-        expectedStartTime: profile?.expected_start_time ?? null,
-        graceMinutes: profile?.grace_minutes ?? 5,
+        scheduleAssignments:
+          ((scheduleResponse.data ?? []) as AttendanceScheduleAssignment[]) ?? [],
+        fallbackExpectedStartTime: profile?.expected_start_time ?? null,
+        fallbackGraceMinutes: profile?.grace_minutes ?? 5,
+        mode: "local",
       });
 
       const { data, error } = await supabase
@@ -206,11 +225,12 @@ export default function ClockCard({ userId: userIdProp }: { userId?: string | nu
           {
             clock_in: nowISO,
             user_id: userId,
-            late_minutes: lateMinutes,
+            late_minutes: lateMinutes ?? 0,
+            schedule_assignment_id: scheduleAssignment?.id ?? null,
           },
         ])
         .select(
-          "id, clock_in, break, end_break, second_break, end_second_break, clock_out, late_minutes"
+          "id, clock_in, break, end_break, second_break, end_second_break, clock_out, late_minutes, schedule_assignment_id"
         )
         .single();
 

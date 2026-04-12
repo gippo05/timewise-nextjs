@@ -6,6 +6,8 @@ import { z } from "zod";
 import { getAdminMembership } from "@/lib/invitations/server";
 import {
   SCHEDULE_DUPLICATE_ERROR,
+  SCHEDULE_MULTI_SEGMENT_RULE_ERROR,
+  SCHEDULE_OVERLAP_ERROR,
   ScheduleAssignmentValidationError,
   assertSchedulableCompanyMembers,
   buildScheduleAssignmentRows,
@@ -322,6 +324,13 @@ export async function assignSchedulesAction(
       return {
         ok: false,
         error: SCHEDULE_DUPLICATE_ERROR,
+      };
+    }
+
+    if (isPostgresError(error) && error.code === "23P01") {
+      return {
+        ok: false,
+        error: `${SCHEDULE_OVERLAP_ERROR} ${SCHEDULE_MULTI_SEGMENT_RULE_ERROR}`,
       };
     }
 
