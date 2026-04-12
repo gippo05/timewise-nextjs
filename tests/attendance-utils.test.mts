@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   getRelevantWorkDatesForClockIn,
   resolveLateMinutesForClockIn,
+  selectClockInScheduleAssignments,
   type AttendanceScheduleAssignment,
 } from "../lib/attendance.ts";
 
@@ -104,4 +105,31 @@ test("fallback expected start time still works when no schedule segment exists",
 
   assert.equal(resolved.scheduleAssignment, null);
   assert.equal(resolved.lateMinutes, 20);
+});
+
+test("preloaded schedule segments beat the profile expected start fallback", () => {
+  const workDates = getRelevantWorkDatesForClockIn("2026-04-12T16:25:00.000Z", "utc");
+  const scheduleAssignments = selectClockInScheduleAssignments({
+    liveScheduleAssignments: [],
+    fallbackScheduleAssignments: [
+      createScheduleAssignment({
+        id: "third-segment",
+        start_time: "16:00:00",
+        end_time: "19:00:00",
+      }),
+    ],
+    workDates,
+  });
+
+  const resolved = resolveLateMinutesForClockIn({
+    clockInISO: "2026-04-12T16:25:00.000Z",
+    scheduleAssignments,
+    fallbackExpectedStartTime: "10:00:00",
+    fallbackGraceMinutes: 5,
+    mode: "utc",
+  });
+
+  assert.equal(scheduleAssignments.length, 1);
+  assert.equal(resolved.scheduleAssignment?.id, "third-segment");
+  assert.equal(resolved.lateMinutes, 25);
 });

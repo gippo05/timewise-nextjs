@@ -119,6 +119,33 @@ export function getRelevantWorkDatesForClockIn(
   return [workDate, shiftWorkDate(workDate, -1, mode)];
 }
 
+export function selectClockInScheduleAssignments({
+  liveScheduleAssignments = [],
+  fallbackScheduleAssignments = [],
+  workDates = [],
+}: {
+  liveScheduleAssignments?: AttendanceScheduleAssignment[];
+  fallbackScheduleAssignments?: AttendanceScheduleAssignment[];
+  workDates?: string[];
+}) {
+  const relevantWorkDates = new Set(workDates);
+  const seenAssignments = new Set<string>();
+  const combinedAssignments = [...liveScheduleAssignments, ...fallbackScheduleAssignments];
+
+  return combinedAssignments.filter((assignment) => {
+    if (relevantWorkDates.size > 0 && !relevantWorkDates.has(assignment.work_date)) {
+      return false;
+    }
+
+    if (seenAssignments.has(assignment.id)) {
+      return false;
+    }
+
+    seenAssignments.add(assignment.id);
+    return true;
+  });
+}
+
 export function computeLateMinutes({
   clockInISO,
   expectedStartTime,

@@ -4,7 +4,9 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 import { createClient } from "@/lib/supabase/server";
+import { listScheduleAssignmentsForUserRange } from "@/lib/scheduling/server";
 import DashboardClient from "@/components/DashboardClient";
+import type { AttendanceScheduleAssignment } from "@/lib/attendance";
 import type { AttendanceRow } from "@/src/types/attendance";
 
 type AttendanceQueryRow = {
@@ -21,6 +23,12 @@ type AttendanceQueryRow = {
   profiles: AttendanceRow["profiles"] | AttendanceRow["profiles"][number] | null;
 };
 
+function addUtcDays(dateInput: string, days: number) {
+  const date = new Date(`${dateInput}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
 
@@ -30,7 +38,13 @@ export default async function DashboardPage() {
     return null;
   }
 
-  const [profileRes, attendanceRes] = await Promise.all([
+  const todayDateInput = new Date().toISOString().slice(0, 10);
+  const scheduleRange = {
+    from: addUtcDays(todayDateInput, -2),
+    to: addUtcDays(todayDateInput, 2),
+  };
+
+  const [profileRes, attendanceRes, scheduleAssignments] = await Promise.all([
     supabase
       .from("profiles")
       .select("first_name, last_name, role")
@@ -60,6 +74,8 @@ export default async function DashboardPage() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(50),
+
+    listScheduleAssignmentsForUserRange(supabase, user.id, scheduleRange).catch(() => []),
   ]);
 
   const first_name = profileRes.data?.first_name ?? "";
@@ -69,19 +85,19 @@ export default async function DashboardPage() {
   const attendanceRows = (attendanceRes.data ?? []) as unknown as AttendanceQueryRow[];
 
   const attendance: AttendanceRow[] = attendanceRows.map((row) => ({
-  id: String(row.id),
-  user_id: String(row.user_id),
-  created_at: String(row.created_at),
+    id: String(row.id),
+    user_id: String(row.user_id),
+    created_at: String(row.created_at),
 
-  clock_in: row.clock_in ?? null,
-  break: row.break ?? null,
-  end_break: row.end_break ?? null,
-  second_break: row.second_break ?? null,
-  end_second_break: row.end_second_break ?? null,
-  clock_out: row.clock_out ?? null,
+    clock_in: row.clock_in ?? null,
+    break: row.break ?? null,
+    end_break: row.end_break ?? null,
+    second_break: row.second_break ?? null,
+    end_second_break: row.end_second_break ?? null,
+    clock_out: row.clock_out ?? null,
 
-  late_minutes:
-    typeof row.late_minutes === "number" ? row.late_minutes : row.late_minutes ?? null,
+    late_minutes:
+      typeof row.late_minutes === "number" ? row.late_minutes : row.late_minutes ?? null,
 
     profiles: Array.isArray(row.profiles)
       ? row.profiles
@@ -90,18 +106,25 @@ export default async function DashboardPage() {
         : [],
   }));
 
-
-
+  const fallbackScheduleAssignments: AttendanceScheduleAssignment[] = scheduleAssignments.map(
+    (assignment) => ({
+      id: assignment.id,
+      work_date: assignment.work_date,
+      start_time: assignment.start_time,
+      end_time: assignment.end_time,
+      grace_minutes: assignment.grace_minutes,
+      is_overnight: assignment.is_overnight,
+      is_rest_day: assignment.is_rest_day,
+    })
+  );
   return (
     <DashboardClient
       first_name={first_name}
       last_name={last_name}
       userRole={role}
       attendance={attendance}
+      fallbackScheduleAssignments={fallbackScheduleAssignments}
       userId={user.id}
     />
   );
 }
-
-
-

@@ -13,6 +13,7 @@ import MetricCard from "@/components/metric-card";
 import MoreActions from "@/components/MoreActions";
 import PageHeader from "@/components/page-header";
 import WorkedHoursCard from "@/components/ui/WorkedHoursCard";
+import type { AttendanceScheduleAssignment } from "@/lib/attendance";
 import type { AttendanceRow } from "@/src/types/attendance";
 
 export default function DashboardClient({
@@ -20,12 +21,14 @@ export default function DashboardClient({
   last_name,
   userRole,
   attendance,
+  fallbackScheduleAssignments,
   userId,
 }: {
   first_name: string;
   last_name: string;
   userRole: string;
   attendance: AttendanceRow[];
+  fallbackScheduleAssignments: AttendanceScheduleAssignment[];
   userId?: string | null;
 }) {
   const displayName =
@@ -82,7 +85,10 @@ export default function DashboardClient({
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,360px)_minmax(0,1fr)]">
         <div className="min-w-0">
-          <ClockCard userId={userId} />
+          <ClockCard
+            userId={userId}
+            fallbackScheduleAssignments={fallbackScheduleAssignments}
+          />
         </div>
 
         <div className="grid min-w-0 gap-6 md:grid-cols-2">

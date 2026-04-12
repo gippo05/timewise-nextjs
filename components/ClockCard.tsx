@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import {
   getRelevantWorkDatesForClockIn,
   resolveLateMinutesForClockIn,
+  selectClockInScheduleAssignments,
   type AttendanceScheduleAssignment,
 } from "@/lib/attendance";
 import { toast } from "sonner";
@@ -37,7 +38,13 @@ function formatTime(iso: string | null) {
   });
 }
 
-export default function ClockCard({ userId: userIdProp }: { userId?: string | null }) {
+export default function ClockCard({
+  userId: userIdProp,
+  fallbackScheduleAssignments = [],
+}: {
+  userId?: string | null;
+  fallbackScheduleAssignments?: AttendanceScheduleAssignment[];
+}) {
   const [userId, setUserId] = useState<string | null>(userIdProp ?? null);
   const [active, setActive] = useState<AttendanceRow | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -210,14 +217,31 @@ export default function ClockCard({ userId: userIdProp }: { userId?: string | nu
         console.error("Failed to fetch schedule assignments for clock-in:", scheduleResponse.error);
       }
 
+      const availableScheduleAssignments = selectClockInScheduleAssignments({
+        liveScheduleAssignments:
+          ((scheduleResponse.data ?? []) as AttendanceScheduleAssignment[]) ?? [],
+        fallbackScheduleAssignments,
+        workDates,
+      });
+
+      if (scheduleResponse.error && availableScheduleAssignments.length === 0) {
+        toast.error("Unable to verify today's schedule. Please refresh and try again.");
+        return;
+      }
+
       const { scheduleAssignment, lateMinutes } = resolveLateMinutesForClockIn({
         clockInISO: nowISO,
-        scheduleAssignments:
-          ((scheduleResponse.data ?? []) as AttendanceScheduleAssignment[]) ?? [],
-        fallbackExpectedStartTime: profile?.expected_start_time ?? null,
+        scheduleAssignments: availableScheduleAssignments,
+        fallbackExpectedStartTime:
+          availableScheduleAssignments.length === 0 ? profile?.expected_start_time ?? null : null,
         fallbackGraceMinutes: profile?.grace_minutes ?? 5,
         mode: "local",
       });
+
+      if (availableScheduleAssignments.length > 0 && !scheduleAssignment) {
+        toast.error("Unable to match this clock-in to today's schedule. Please refresh and try again.");
+        return;
+      }
 
       const { data, error } = await supabase
         .from("attendance")
