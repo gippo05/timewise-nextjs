@@ -5,6 +5,13 @@ export type AttendanceProfile = {
   role: string | null;
 };
 
+export type AttendanceEditorProfile = {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  full_name?: string | null;
+} | null;
+
 export type AttendanceRow = {
   id: string;
   user_id: string;
@@ -17,5 +24,8 @@ export type AttendanceRow = {
   clock_out: string | null;
   late_minutes: number | null;
   schedule_assignment_id?: string | null;
+  last_edited_by?: string | null;
+  last_edited_at?: string | null;
+  editor_profile?: AttendanceEditorProfile;
   profiles: AttendanceProfile[];
 };

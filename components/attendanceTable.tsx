@@ -1,9 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState, useTransition } from "react";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Pencil, Save, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
+import { updateAttendanceAction } from "@/app/dashboard/attendance-table/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,6 +17,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
@@ -29,10 +34,33 @@ type AttendanceTableProps = {
   title?: string;
   description?: string;
   showEmployeeFilter?: boolean;
+  canEditAttendance?: boolean;
   pageSize?: number;
 };
 
 type EmployeeOption = { id: string; name: string };
+
+type AttendanceEditForm = {
+  clock_in: string;
+  break: string;
+  end_break: string;
+  second_break: string;
+  end_second_break: string;
+  clock_out: string;
+};
+
+const attendanceEditFields: Array<{
+  key: keyof AttendanceEditForm;
+  label: string;
+  required?: boolean;
+}> = [
+  { key: "clock_in", label: "Clock in", required: true },
+  { key: "break", label: "Break start" },
+  { key: "end_break", label: "Break end" },
+  { key: "second_break", label: "Second break start" },
+  { key: "end_second_break", label: "Second break end" },
+  { key: "clock_out", label: "Clock out" },
+];
 
 function toStartOfDayMs(yyyyMmDd: string): number {
   const [y, m, d] = yyyyMmDd.split("-").map(Number);
@@ -98,6 +126,10 @@ function getProfile(log: AttendanceRow) {
   return log.profiles?.[0] ?? null;
 }
 
+function isEmployeeAttendance(log: AttendanceRow) {
+  return getProfile(log)?.role === "employee";
+}
+
 function getFullName(log: AttendanceRow) {
   const profile = getProfile(log);
   const first = profile?.first_name ?? "";
@@ -116,6 +148,50 @@ function formatTime(value: string | null) {
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
+  });
+}
+
+function toDateTimeLocalValue(value: string | null) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 16);
+}
+
+function createEditForm(log: AttendanceRow): AttendanceEditForm {
+  return {
+    clock_in: toDateTimeLocalValue(log.clock_in),
+    break: toDateTimeLocalValue(log.break),
+    end_break: toDateTimeLocalValue(log.end_break),
+    second_break: toDateTimeLocalValue(log.second_break),
+    end_second_break: toDateTimeLocalValue(log.end_second_break),
+    clock_out: toDateTimeLocalValue(log.clock_out),
+  };
+}
+
+function getEditorName(log: AttendanceRow) {
+  const editor = log.editor_profile;
+  if (!editor) return null;
+
+  const fullName =
+    editor.full_name?.trim() ||
+    [editor.first_name, editor.last_name].filter(Boolean).join(" ").trim();
+
+  return fullName || "Admin";
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return null;
+
+  return new Date(value).toLocaleString([], {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -174,12 +250,17 @@ export default function AttendanceTable({
   title = "Attendance records",
   description = "Review time logs, breaks, late minutes, and total worked hours in one clean table.",
   showEmployeeFilter,
+  canEditAttendance = false,
   pageSize = 10,
 }: AttendanceTableProps) {
+  const router = useRouter();
   const [currentPage, setCurrentPage] = useState(1);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedUserId, setSelectedUserId] = useState("");
+  const [editingLogId, setEditingLogId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<AttendanceEditForm | null>(null);
+  const [isSavingEdit, startSavingEdit] = useTransition();
 
   const logs = useMemo(() => attendance ?? [], [attendance]);
 
@@ -254,6 +335,45 @@ export default function AttendanceTable({
     setToDate("");
     setSelectedUserId("");
     setCurrentPage(1);
+  }
+
+  function startEditing(log: AttendanceRow) {
+    setEditingLogId(log.id);
+    setEditForm(createEditForm(log));
+  }
+
+  function cancelEditing() {
+    setEditingLogId(null);
+    setEditForm(null);
+  }
+
+  function updateEditField(field: keyof AttendanceEditForm, value: string) {
+    setEditForm((current) => (current ? { ...current, [field]: value } : current));
+  }
+
+  function handleEditSubmit(log: AttendanceRow) {
+    if (!editForm) return;
+
+    startSavingEdit(async () => {
+      const result = await updateAttendanceAction({
+        attendanceId: log.id,
+        clock_in: editForm.clock_in,
+        break: editForm.break,
+        end_break: editForm.end_break,
+        second_break: editForm.second_break,
+        end_second_break: editForm.end_second_break,
+        clock_out: editForm.clock_out,
+      });
+
+      if (!result.ok) {
+        toast.error(result.error ?? "Unable to update attendance.");
+        return;
+      }
+
+      toast.success("Attendance updated.");
+      cancelEditing();
+      router.refresh();
+    });
   }
 
   return (
@@ -405,6 +525,7 @@ export default function AttendanceTable({
                       "Clock out",
                       "Worked",
                       "Late",
+                      ...(canEditAttendance ? ["Audit", "Actions"] : []),
                     ].map((heading) => (
                       <th
                         key={heading}
@@ -421,46 +542,168 @@ export default function AttendanceTable({
                     const worked = calculateWorkedHours(log);
                     const name = getFullName(log);
                     const role = getProfile(log)?.role ?? null;
+                    const isEditing = editingLogId === log.id;
+                    const canEditThisLog = canEditAttendance && isEmployeeAttendance(log);
+                    const editorName = getEditorName(log);
+                    const editedAt = formatDateTime(log.last_edited_at);
+                    const hasAdminEdit = Boolean(log.last_edited_at);
                     const hasLateMinutes =
                       typeof log.late_minutes === "number" && log.late_minutes > 0;
+                    const lateLabel = hasAdminEdit
+                      ? hasLateMinutes
+                        ? `Recorded ${log.late_minutes} min`
+                        : "Recorded 0 min"
+                      : hasLateMinutes
+                        ? `${log.late_minutes} min`
+                        : "On time";
 
                     return (
-                      <tr
-                        key={log.id}
-                        className="app-row-hover"
-                      >
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {formatRowDate(log.created_at)}
-                        </td>
+                      <Fragment key={log.id}>
+                        <tr className="app-row-hover">
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {formatRowDate(log.created_at)}
+                          </td>
 
-                        <td className="px-4 py-3">
-                          <div className="space-y-1">
-                            <p className="font-semibold text-foreground">{name}</p>
-                            {role ? (
-                              <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-                                {role}
-                              </p>
-                            ) : null}
-                          </div>
-                        </td>
+                          <td className="px-4 py-3">
+                            <div className="space-y-1">
+                              <p className="font-semibold text-foreground">{name}</p>
+                              {role ? (
+                                <p className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                                  {role}
+                                </p>
+                              ) : null}
+                            </div>
+                          </td>
 
-                        <td className="px-4 py-3">{formatTime(log.clock_in)}</td>
-                        <td className="px-4 py-3">{formatTime(log.break)}</td>
-                        <td className="px-4 py-3">{formatTime(log.end_break)}</td>
-                        <td className="px-4 py-3">{formatTime(log.second_break)}</td>
-                        <td className="px-4 py-3">{formatTime(log.end_second_break)}</td>
-                        <td className="px-4 py-3">{formatTime(log.clock_out)}</td>
+                          <td className="px-4 py-3">{formatTime(log.clock_in)}</td>
+                          <td className="px-4 py-3">{formatTime(log.break)}</td>
+                          <td className="px-4 py-3">{formatTime(log.end_break)}</td>
+                          <td className="px-4 py-3">{formatTime(log.second_break)}</td>
+                          <td className="px-4 py-3">{formatTime(log.end_second_break)}</td>
+                          <td className="px-4 py-3">{formatTime(log.clock_out)}</td>
 
-                        <td className="px-4 py-3 font-semibold text-foreground">
-                          {formatWorkedHours(worked)}
-                        </td>
+                          <td className="px-4 py-3 font-semibold text-foreground">
+                            {formatWorkedHours(worked)}
+                          </td>
 
-                        <td className="px-4 py-3">
-                          <Badge variant={hasLateMinutes ? "warning" : "neutral"}>
-                            {hasLateMinutes ? `${log.late_minutes} min` : "On time"}
-                          </Badge>
-                        </td>
-                      </tr>
+                          <td className="px-4 py-3">
+                            <Badge
+                              variant={
+                                hasLateMinutes || hasAdminEdit ? "warning" : "neutral"
+                              }
+                            >
+                              {lateLabel}
+                            </Badge>
+                          </td>
+
+                          {canEditAttendance ? (
+                            <>
+                              <td className="px-4 py-3">
+                                {editorName && editedAt ? (
+                                  <div className="max-w-[180px] space-y-1 text-xs">
+                                    <p className="font-semibold text-foreground">
+                                      Last edited by {editorName}
+                                    </p>
+                                    <p className="text-muted-foreground">{editedAt}</p>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">No edits</span>
+                                )}
+                              </td>
+
+                              <td className="px-4 py-3">
+                                <Button
+                                  type="button"
+                                  variant={isEditing ? "secondary" : "outline"}
+                                  size="sm"
+                                  onClick={() =>
+                                    canEditThisLog
+                                      ? isEditing
+                                        ? cancelEditing()
+                                        : startEditing(log)
+                                      : undefined
+                                  }
+                                  disabled={isSavingEdit || !canEditThisLog}
+                                >
+                                  {isEditing ? (
+                                    <>
+                                      <X className="size-4" />
+                                      Close
+                                    </>
+                                  ) : !canEditThisLog ? (
+                                    "Employee only"
+                                  ) : (
+                                    <>
+                                      <Pencil className="size-4" />
+                                      Edit
+                                    </>
+                                  )}
+                                </Button>
+                              </td>
+                            </>
+                          ) : null}
+                        </tr>
+
+                        {canEditThisLog && isEditing && editForm ? (
+                          <tr>
+                            <td colSpan={12} className="bg-secondary/35 px-4 py-4">
+                              <div className="rounded-2xl border bg-[var(--surface-panel-strong)] p-4 shadow-[var(--shadow-card)]">
+                                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                  <div>
+                                    <p className="font-semibold text-foreground">
+                                      Edit attendance for {name}
+                                    </p>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                      Save corrections with an admin footprint.
+                                    </p>
+                                  </div>
+
+                                  <div className="flex gap-2">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={cancelEditing}
+                                      disabled={isSavingEdit}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      onClick={() => handleEditSubmit(log)}
+                                      disabled={isSavingEdit}
+                                    >
+                                      <Save className="size-4" />
+                                      {isSavingEdit ? "Saving..." : "Save"}
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                                  {attendanceEditFields.map((field) => (
+                                    <div key={field.key} className="space-y-2">
+                                      <Label htmlFor={`${log.id}-${field.key}`}>
+                                        {field.label}
+                                      </Label>
+                                      <Input
+                                        id={`${log.id}-${field.key}`}
+                                        type="datetime-local"
+                                        value={editForm[field.key]}
+                                        required={field.required}
+                                        disabled={isSavingEdit}
+                                        onChange={(event) =>
+                                          updateEditField(field.key, event.target.value)
+                                        }
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
                     );
                   })}
                 </tbody>

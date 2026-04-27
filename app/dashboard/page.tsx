@@ -64,7 +64,7 @@ export default async function DashboardPage() {
         end_second_break,
         clock_out,
         late_minutes,
-        profiles (
+        profiles!attendance_user_id_fkey (
           id,
           first_name,
           last_name,
