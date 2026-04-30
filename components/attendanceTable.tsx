@@ -439,7 +439,7 @@ export default function AttendanceTable({
               {shouldShowEmployeeFilter ? (
                 <div className="flex min-w-[220px] flex-col gap-1.5">
                   <label className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                    Employee
+                    Team member
                   </label>
                   <Select
                     value={selectedUserId || "__all__"}
@@ -449,10 +449,10 @@ export default function AttendanceTable({
                     }}
                   >
                     <SelectTrigger className="min-w-[220px]">
-                      <SelectValue placeholder="All employees" />
+                      <SelectValue placeholder="All team members" />
                     </SelectTrigger>
                     <SelectContent align="start">
-                      <SelectItem value="__all__">All employees</SelectItem>
+                      <SelectItem value="__all__">All team members</SelectItem>
                       {employees.map((employee) => (
                         <SelectItem key={employee.id} value={employee.id}>
                           {employee.name}

@@ -130,7 +130,11 @@ export default async function AttendanceTablePage() {
           ? [row.profiles]
           : [],
     }))
-    .filter((row) => row.profiles.some((profile) => profile.role === "employee"));
+    .filter(
+      (row) =>
+        row.user_id === user.id ||
+        row.profiles.some((profile) => profile.role === "employee")
+    );
 
   return (
     <AttendanceTable
