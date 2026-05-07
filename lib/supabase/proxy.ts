@@ -34,6 +34,7 @@ export async function updateSession(request: NextRequest) {
     "/forgot-password",
     "/reset-password",
     "/invite",
+    "/owner/onboarding",
     "/auth/callback",
   ];
 

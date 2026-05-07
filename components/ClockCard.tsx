@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 import {
-  getRelevantWorkDatesForClockIn,
-  resolveLateMinutesForClockIn,
-  selectClockInScheduleAssignments,
+  clockInAction,
+  clockOutAction,
+  endBreakAction,
+  getActiveAttendanceAction,
+  startBreakAction,
+} from "@/app/dashboard/clock-actions";
+import {
   type AttendanceScheduleAssignment,
 } from "@/lib/attendance";
 import { toast } from "sonner";
@@ -13,8 +16,6 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-const supabase = createClient();
 
 type AttendanceRow = {
   id: string;
@@ -40,7 +41,6 @@ function formatTime(iso: string | null) {
 
 export default function ClockCard({
   userId: userIdProp,
-  fallbackScheduleAssignments = [],
 }: {
   userId?: string | null;
   fallbackScheduleAssignments?: AttendanceScheduleAssignment[];
@@ -76,25 +76,16 @@ export default function ClockCard({
     [currentTime]
   );
 
-  async function refreshActiveAttendance(uid: string): Promise<AttendanceRow | null> {
-    const { data, error } = await supabase
-      .from("attendance")
-      .select(
-        "id, clock_in, break, end_break, second_break, end_second_break, clock_out, late_minutes, schedule_assignment_id"
-      )
-      .eq("user_id", uid)
-      .is("clock_out", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+  async function refreshActiveAttendance(): Promise<AttendanceRow | null> {
+    const result = await getActiveAttendanceAction();
 
-    if (error) {
-      console.error("Failed to fetch active attendance:", error);
+    if (!result.ok) {
+      console.error("Failed to fetch active attendance:", result.error);
       setActive(null);
       return null;
     }
 
-    const row = (data ?? null) as AttendanceRow | null;
+    const row = (result.attendance ?? null) as AttendanceRow | null;
     setActive(row);
     return row;
   }
@@ -102,28 +93,8 @@ export default function ClockCard({
   useEffect(() => {
     async function loadUser() {
       try {
-        if (userIdProp) {
-          const uid = userIdProp;
-          setUserId(uid);
-          await refreshActiveAttendance(uid);
-          return;
-        }
-
-        const {
-          data: { user },
-          error,
-        } = await supabase.auth.getUser();
-
-        if (error) {
-          console.error("auth.getUser error:", error);
-        }
-
-        const uid = user?.id ?? null;
-        setUserId(uid);
-
-        if (uid) {
-          await refreshActiveAttendance(uid);
-        }
+        setUserId(userIdProp ?? null);
+        await refreshActiveAttendance();
       } finally {
         setIsLoading(false);
       }
@@ -183,140 +154,20 @@ export default function ClockCard({
 
     setIsActing(true);
     try {
-      const current = await refreshActiveAttendance(userId);
-      if (current?.clock_in && !current.clock_out) {
-        toast.message("You already have an active shift.");
+      const result = await clockInAction();
+      if (!result.ok) {
+        if (result.attendance) {
+          setActive(result.attendance as AttendanceRow);
+        }
+        toast.error(result.error ?? "Unable to clock in right now.");
         return;
       }
 
-      const nowISO = new Date().toISOString();
-      const workDates = getRelevantWorkDatesForClockIn(nowISO, "local");
-      const [profileResponse, scheduleResponse] = await Promise.all([
-        supabase.from("profiles").select("expected_start_time, grace_minutes").eq("id", userId).maybeSingle(),
-        supabase
-          .from("employee_schedule_assignments")
-          .select("id, work_date, start_time, end_time, grace_minutes, is_overnight, is_rest_day")
-          .eq("user_id", userId)
-          .in("work_date", workDates)
-          .order("work_date", { ascending: true })
-          .order("start_time", { ascending: true }),
-      ]);
-
-      const { data: profile, error: profileError } = profileResponse;
-
-      if (profileError) {
-        console.error("Failed to fetch profile schedule fields:", {
-          code: profileError.code,
-          message: profileError.message,
-          details: profileError.details,
-          hint: profileError.hint,
-        });
-      }
-
-      if (scheduleResponse.error) {
-        console.error("Failed to fetch schedule assignments for clock-in:", scheduleResponse.error);
-      }
-
-      const availableScheduleAssignments = selectClockInScheduleAssignments({
-        liveScheduleAssignments:
-          ((scheduleResponse.data ?? []) as AttendanceScheduleAssignment[]) ?? [],
-        fallbackScheduleAssignments,
-        workDates,
-      });
-
-      if (scheduleResponse.error && availableScheduleAssignments.length === 0) {
-        toast.error("Unable to verify today's schedule. Please refresh and try again.");
-        return;
-      }
-
-      const { scheduleAssignment, lateMinutes } = resolveLateMinutesForClockIn({
-        clockInISO: nowISO,
-        scheduleAssignments: availableScheduleAssignments,
-        fallbackExpectedStartTime:
-          availableScheduleAssignments.length === 0 ? profile?.expected_start_time ?? null : null,
-        fallbackGraceMinutes: profile?.grace_minutes ?? 5,
-        mode: "local",
-      });
-
-      if (availableScheduleAssignments.length > 0 && !scheduleAssignment) {
-        toast.error("Unable to match this clock-in to today's schedule. Please refresh and try again.");
-        return;
-      }
-
-      const { data, error } = await supabase
-        .from("attendance")
-        .insert([
-          {
-            clock_in: nowISO,
-            user_id: userId,
-            late_minutes: lateMinutes ?? 0,
-            schedule_assignment_id: scheduleAssignment?.id ?? null,
-          },
-        ])
-        .select(
-          "id, clock_in, break, end_break, second_break, end_second_break, clock_out, late_minutes, schedule_assignment_id"
-        )
-        .single();
-
-      if (error) {
-        console.error("Clock in error:", error);
-        toast.error(error.message);
-        return;
-      }
-
-      setActive((data ?? null) as AttendanceRow | null);
+      setActive((result.attendance ?? null) as AttendanceRow | null);
       toast.success("Clocked in successfully.");
     } finally {
       setIsActing(false);
     }
-  }
-
-  async function startBreakAuto(uid: string) {
-    const current = await refreshActiveAttendance(uid);
-    if (!current?.id) throw new Error("No active attendance row.");
-
-    const now = new Date().toISOString();
-    const updates: Record<string, string | null> = {};
-
-    if (!current.break) {
-      updates.break = now;
-      updates.end_break = null;
-    } else if (!current.second_break) {
-      updates.second_break = now;
-      updates.end_second_break = null;
-    } else {
-      return { ok: false, reason: "Both break slots have already been used." };
-    }
-
-    const { error } = await supabase.from("attendance").update(updates).eq("id", current.id);
-
-    if (error) throw error;
-
-    await refreshActiveAttendance(uid);
-    return { ok: true };
-  }
-
-  async function endBreakAuto(uid: string) {
-    const current = await refreshActiveAttendance(uid);
-    if (!current?.id) throw new Error("No active attendance row.");
-
-    const now = new Date().toISOString();
-    const updates: Record<string, string | null> = {};
-
-    if (current.break && !current.end_break) {
-      updates.end_break = now;
-    } else if (current.second_break && !current.end_second_break) {
-      updates.end_second_break = now;
-    } else {
-      return { ok: false, reason: "There is no active break to end." };
-    }
-
-    const { error } = await supabase.from("attendance").update(updates).eq("id", current.id);
-
-    if (error) throw error;
-
-    await refreshActiveAttendance(uid);
-    return { ok: true };
   }
 
   async function clockOut() {
@@ -324,16 +175,9 @@ export default function ClockCard({
 
     setIsActing(true);
     try {
-      const timestamp = new Date().toISOString();
-
-      const { error } = await supabase
-        .from("attendance")
-        .update({ clock_out: timestamp })
-        .eq("id", active.id);
-
-      if (error) {
-        console.error("Clock out error:", error);
-        toast.error(error.message);
+      const result = await clockOutAction();
+      if (!result.ok) {
+        toast.error(result.error ?? "Unable to clock out right now.");
         return;
       }
 
@@ -349,12 +193,16 @@ export default function ClockCard({
 
     setIsActing(true);
     try {
-      const result = await startBreakAuto(userId);
+      const result = await startBreakAction();
       if (!result.ok) {
-        toast.message(result.reason);
+        if (result.attendance) {
+          setActive(result.attendance as AttendanceRow);
+        }
+        toast.message(result.error ?? "Failed to start break.");
         return;
       }
 
+      setActive((result.attendance ?? null) as AttendanceRow | null);
       toast.success("Break started.");
     } catch (error: unknown) {
       console.error(error);
@@ -369,12 +217,16 @@ export default function ClockCard({
 
     setIsActing(true);
     try {
-      const result = await endBreakAuto(userId);
+      const result = await endBreakAction();
       if (!result.ok) {
-        toast.message(result.reason);
+        if (result.attendance) {
+          setActive(result.attendance as AttendanceRow);
+        }
+        toast.message(result.error ?? "Failed to end break.");
         return;
       }
 
+      setActive((result.attendance ?? null) as AttendanceRow | null);
       toast.success("Break ended.");
     } catch (error: unknown) {
       console.error(error);
